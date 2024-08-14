@@ -1,8 +1,8 @@
 name: basketball
 
 include:
-  - cache.yml
-  - database.yml
+  - cache.yaml
+  - database.yaml
 
 networks:
   default:
