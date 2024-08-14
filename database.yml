@@ -1,0 +1,81 @@
+services:
+  database-1:
+    restart: always
+    image: "cockroachdb/cockroach:latest"
+    container_name: basketball-database-1
+    volumes:
+      - type: volume
+        source: database-1
+        target: /cockroach/cockroach-data
+        volume:
+          nocopy: true
+    command: |
+      start
+      --insecure
+      --cache=25%
+      --max-sql-memory=25%
+      --locality=region=eu-central,zone=eu-poland
+      --join=database-1:26357,database-2:26357,database-3:26357
+      --listen-addr=database-1:26357
+      --sql-addr=database-1:26257
+    depends_on:
+      - cache
+    ports:
+      - "0.0.0.0:80:8080"
+      - "0.0.0.0:26257:26257"
+    environment:
+      COCKROACH_DATABASE: basketball
+      COCKROACH_USER: basketball
+      COCKROACH_PASSWORD: your-secret-password
+
+  database-2:
+    restart: always
+    image: "cockroachdb/cockroach:latest"
+    container_name: basketball-database-2
+    volumes:
+      - type: volume
+        source: database-2
+        target: /cockroach/cockroach-data
+        volume:
+          nocopy: true
+    command: |
+      start
+      --insecure
+      --cache=25%
+      --max-sql-memory=25%
+      --locality=region=eu-central,zone=eu-poland
+      --join=database-1:26357,database-2:26357,database-3:26357
+      --listen-addr=database-2:26357
+      --sql-addr=database-2:26257
+    depends_on:
+      - database-1
+
+  database-3:
+    restart: always
+    image: "cockroachdb/cockroach:latest"
+    container_name: basketball-database-3
+    volumes:
+      - type: volume
+        source: database-3
+        target: /cockroach/cockroach-data
+        volume:
+          nocopy: true
+    command: |
+      start
+      --insecure
+      --cache=25%
+      --max-sql-memory=25%
+      --locality=region=eu-central,zone=eu-poland
+      --join=database-1:26357,database-2:26357,database-3:26357
+      --listen-addr=database-3:26357
+      --sql-addr=database-3:26257
+    depends_on:
+      - database-1
+
+volumes:
+  database-1:
+    name: basketball-database-1
+  database-2:
+    name: basketball-database-2
+  database-3:
+    name: basketball-database-3
