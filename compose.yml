@@ -1,0 +1,64 @@
+services:
+  basketball-cockroach-main:
+    image: "cockroachdb/cockroach:latest"
+    restart: always
+    ports:
+      - "80:80"
+      - "26257:26257"
+    volumes:
+      - type: volume
+        source: basketball-cockroach-main
+        target: /cockroach/cockroach-data
+        volume:
+          nocopy: true
+    command: start \
+      --advertise-addr=basketball-cockroach-main:26357 \
+      --http-addr=basketball-cockroach-main:80 \
+      --listen-addr=basketball-cockroach-main:26357 \
+      --sql-addr=basketball-cockroach-main:26257 \
+      --insecure \
+      --join=basketball-cockroach-main:26357,basketball-cockroach-instance-1:26357,basketball-cockroach-instance-2:26357,basketball-cockroach-instance-3:26357
+  basketball-cockroach-instance:
+    image: "cockroachdb/cockroach:latest"
+    restart: always
+    volumes:
+      - type: volume
+        source: 'basketball-cockroach-instance-{{.Task.Slot}}'
+        target: /cockroach/cockroach-data
+        volume:
+          nocopy: true
+    command: start \
+      --advertise-addr='basketball-cockroach-instance-{{.Task.Slot}}':26357 \
+      --listen-addr='basketball-cockroach-instance-{{.Task.Slot}}':26357 \
+      --insecure \
+      --join=basketball-cockroach-main:26357,basketball-cockroach-instance-1:26357,basketball-cockroach-instance-2:26357,basketball-cockroach-instance-3:26357
+    deploy:
+      replicas: 3
+
+  redis:
+    image: "redis:alpine"
+    container_name: basketball-redis
+    hostname: basketball-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - type: volume
+        source: redis
+        target: /data
+        volume:
+          nocopy: true
+
+volumes:
+  cockroach-main:
+    name: basketball-cockroach-main
+  cockroach-instance:
+    name: 'basketball-cockroach-{{.Task.Slot}}'
+  redis:
+    name: basketball-redis
+
+networks:
+  default:
+    name: basketball-network
+  cockroach:
+    name: basketball-cockroach
