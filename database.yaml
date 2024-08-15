@@ -14,7 +14,7 @@ services:
       --insecure
       --cache=25%
       --max-sql-memory=25%
-      --locality=region=eu-central,zone=eu-poland
+      --locality=region=eu-central,zone=eu-poland-1
       --join=database-1:26357,database-2:26357,database-3:26357
       --listen-addr=database-1:26357
       --sql-addr=database-1:26257
@@ -25,8 +25,6 @@ services:
       - "0.0.0.0:26257:26257"
     environment:
       COCKROACH_DATABASE: basketball
-      COCKROACH_USER: basketball
-      COCKROACH_PASSWORD: your-secret-password
 
   database-2:
     restart: always
@@ -43,7 +41,7 @@ services:
       --insecure
       --cache=25%
       --max-sql-memory=25%
-      --locality=region=eu-central,zone=eu-poland
+      --locality=region=eu-central,zone=eu-poland-2
       --join=database-1:26357,database-2:26357,database-3:26357
       --listen-addr=database-2:26357
       --sql-addr=database-2:26257
@@ -65,7 +63,7 @@ services:
       --insecure
       --cache=25%
       --max-sql-memory=25%
-      --locality=region=eu-central,zone=eu-poland
+      --locality=region=eu-central,zone=eu-poland-3
       --join=database-1:26357,database-2:26357,database-3:26357
       --listen-addr=database-3:26357
       --sql-addr=database-3:26257

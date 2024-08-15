@@ -1,5 +1,11 @@
 #!/bin/bash
 
-docker compose down -d --remove-orphans
-docker compose up -d
-docker exec basketball-database-1 ./cockroach --host=basketball-database-1:26357 init --insecure
+host="basketball-database-1"
+user="basketball"
+sql="CREATE DATABASE ${user}; CREATE USER ${user} WITH PASSWORD NULL; ALTER DATABASE ${user} OWNER TO ${user};"
+
+docker compose down -d --volume --remove-orphans &>/dev/null
+docker compose up -d &>/dev/null
+docker exec -it "${host}" ./cockroach init --host="${host}:26357" --insecure &>/dev/null
+docker exec -it "${host}" ./cockroach sql --host="${host}:26257" --insecure --execute="${sql}" &>/dev/null
+docker exec -it "${host}" ./cockroach node status --host="${host}:26257" --insecure
