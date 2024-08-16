@@ -1,0 +1,6 @@
+.idea
+
+api/node_modules
+web/node_modules
+
+web/.nuxt

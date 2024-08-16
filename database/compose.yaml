@@ -2,6 +2,8 @@ services:
   database-1:
     restart: always
     image: "cockroachdb/cockroach:latest"
+    networks:
+      - database
     container_name: basketball-database-1
     volumes:
       - type: volume
@@ -21,14 +23,15 @@ services:
     depends_on:
       - cache
     ports:
-      - "0.0.0.0:80:8080"
-      - "0.0.0.0:26257:26257"
+      - "0.0.0.0:81:8080"
     environment:
       COCKROACH_DATABASE: basketball
 
   database-2:
     restart: always
     image: "cockroachdb/cockroach:latest"
+    networks:
+      - database
     container_name: basketball-database-2
     volumes:
       - type: volume
@@ -51,6 +54,8 @@ services:
   database-3:
     restart: always
     image: "cockroachdb/cockroach:latest"
+    networks:
+      - database
     container_name: basketball-database-3
     volumes:
       - type: volume

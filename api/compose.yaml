@@ -1,0 +1,8 @@
+services:
+  api:
+    restart: always
+    build: .
+    networks:
+      - gateway
+    image: "basketball-api:latest"
+    container_name: basketball-api

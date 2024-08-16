@@ -1,0 +1,13 @@
+{
+  "name": "api",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "NODE_ENV=production node ./dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.3.0",
+    "tsx": "^4.17.0",
+    "typescript": "^5.5.4"
+  }
+}
