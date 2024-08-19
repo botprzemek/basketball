@@ -1,6 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 
-
 createServer((_request: IncomingMessage, response: ServerResponse): void => {
 		response
 			.setHeader("Content-Type", "application/json")
@@ -21,4 +20,6 @@ createServer((_request: IncomingMessage, response: ServerResponse): void => {
 				},
 			]));
 	})
-	.listen(3000, "0.0.0.0");
+	.listen(3000, "0.0.0.0", (): void => {
+		console.log("  Listening on http://[::]:3000");
+	});

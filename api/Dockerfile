@@ -24,7 +24,7 @@ ENV NODE_ENV=production
 
 RUN npm install --clean --production
 
-COPY --from=setup --chown=node:node /app/.dist ./.dist
+COPY --from=setup --chown=node:node /app/dist ./dist
 
 RUN npm prune --production
 
@@ -38,11 +38,12 @@ RUN apk add --update nodejs
 
 WORKDIR /app
 
-COPY --from=production --chown=node:node /app/.dist ./.dist
+COPY --from=production --chown=node:node /app/dist ./dist
+COPY --from=production --chown=node:node /app/node_modules ./node_modules
 COPY --from=production --chown=node:node /app/package.json ./package.json
 
 ENV NODE_ENV=production
 
-CMD ["node", "./.dist/index.js"]
+CMD ["node", "./dist/index.js"]
 
 EXPOSE 3000

@@ -2,7 +2,8 @@
   "name": "panel",
   "type": "module",
   "scripts": {
-    "build": "nuxt build"
+    "build": "nuxt build",
+    "dev": "nuxt dev"
   },
   "dependencies": {
     "nuxt": "^3.12.4",

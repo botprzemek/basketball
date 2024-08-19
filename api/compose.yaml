@@ -1,8 +1,14 @@
 services:
   api:
     restart: always
-    build: .
     networks:
+      - cache
+      - database
       - gateway
     image: "basketball-api:latest"
     container_name: basketball-api
+    build: .
+    develop:
+      watch:
+        - action: rebuild
+          path: /src

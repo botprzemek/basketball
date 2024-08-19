@@ -1,15 +1,11 @@
 name: basketball
 
 include:
-  - ./api/compose.yaml
+  - ../basketball-api/compose.yaml
   - ./cache/compose.yaml
   - ./database/compose.yaml
-  - ./panel/compose.yaml
+#  - ./panel/compose.yaml
 
 networks:
   default:
     name: basketball
-  database:
-    name: basketball-database
-  gateway:
-    name: basketball-gateway

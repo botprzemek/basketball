@@ -3,15 +3,19 @@ services:
     restart: always
     image: "redis:alpine"
     container_name: basketball-cache
+    networks:
+      - cache
     volumes:
       - type: volume
         source: cache
         target: /data
         volume:
           nocopy: true
-    ports:
-      - "0.0.0.0:6379:6379"
 
 volumes:
+  cache:
+    name: basketball-cache
+
+networks:
   cache:
     name: basketball-cache

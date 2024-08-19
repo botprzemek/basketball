@@ -2,6 +2,10 @@ services:
   panel:
     restart: always
     build: .
+    develop:
+      watch:
+        - action: rebuild
+          path: /src
     networks:
       - gateway
     image: "basketball-panel:latest"
