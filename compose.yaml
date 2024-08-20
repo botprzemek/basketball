@@ -1,7 +1,7 @@
 name: basketball
 
 include:
-  - ../basketball-api/compose.yaml
+  - ./api/compose.yaml
   - ./cache/compose.yaml
   - ./database/compose.yaml
 #  - ./panel/compose.yaml
