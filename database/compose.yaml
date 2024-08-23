@@ -11,15 +11,12 @@ services:
         target: /cockroach/cockroach-data
         volume:
           nocopy: true
-    command: |
-      start
-      --insecure
-      --cache=25%
-      --max-sql-memory=25%
-      --locality=region=eu-central,zone=eu-poland-1
-      --join=database-1:26357,database-2:26357,database-3:26357
-      --listen-addr=database-1:26357
-      --sql-addr=database-1:26257
+      - type: volume
+        source: ./initialize.sh
+        target: ./initialize.sh
+        volume:
+          nocopy: true
+    command: bash ./initialize.sh
     depends_on:
       - cache
     ports:

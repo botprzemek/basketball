@@ -15,9 +15,6 @@ Start
 ```bash
 docker compose down -d --volumes --remove-orphans &>/dev/null
 docker compose up -d --build --force-recreate &>/dev/null
-docker exec -it basketball-database-1 ./cockroach init --insecure --host="basketball-database-1:26357" &>/dev/null
-docker exec -it basketball-database-1 ./cockroach sql --insecure --host="basketball-database-1:26257" --execute="CREATE DATABASE basketball; CREATE USER basketball WITH PASSWORD NULL; ALTER DATABASE basketball OWNER TO basketball; CREATE TYPE basketball.position_enum AS ENUM ('PG', 'SG', 'SF', 'PF', 'C');" &>/dev/null
-docker exec -it basketball-database-1 ./cockroach node status --insecure --host="basketball-database-1:26257"
 ```
 
 Windows
