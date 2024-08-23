@@ -1,0 +1,10 @@
+services:
+  panel:
+    restart: always
+    build: .
+    image: "basketball-panel:latest"
+    container_name: basketball-panel
+    networks:
+      - gateway
+    ports:
+      - "0.0.0.0:80:3000"

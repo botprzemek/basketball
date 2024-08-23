@@ -24,6 +24,7 @@ services:
       - cache
     ports:
       - "0.0.0.0:81:8080"
+      - "0.0.0.0:26257:26257"
     environment:
       COCKROACH_DATABASE: basketball
 

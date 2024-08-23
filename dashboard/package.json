@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "nuxt": "^3.12.4",
+    "vue": "latest"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  },
+  "name": "basketball-dashboard",
+  "prettier": {
+    "tabWidth": 4
+  },
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev"
+  },
+  "type": "module"
+}
