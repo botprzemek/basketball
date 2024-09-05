@@ -5,16 +5,18 @@ export default defineEventHandler(async (event) => {
         return;
     }
 
-    return fetch("http://localhost:3000/v1/auth/login", {
+    const data = await fetch("http://localhost:3000/v1/auth/login", {
         method: "POST",
         mode: "cors",
         credentials: "include",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         body: JSON.stringify({
             email,
-            password
-        })
+            password,
+        }),
     });
+
+    return data.ok;
 });

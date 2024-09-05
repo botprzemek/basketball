@@ -1,13 +1,31 @@
-<script lang="ts" setup>
+<script async lang="ts" setup>
 const credentials = ref<{ email: string; password: string }>({
-    email: "name@example.com",
-    password: "S3cuRePa$$w0rd"
+    email: "test@test.com",
+    password: "Test123",
 });
+
+const send = async () => {
+    const data = await $fetch("/api/auth/login", {
+        method: "POST",
+        mode: "cors",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials.value),
+    });
+
+    if (!data) {
+        return;
+    }
+
+    navigateTo({ path: "/panel" });
+};
 </script>
 
 <template>
     <h1>Login</h1>
-    <form @submit.prevent="useLogin(credentials)">
+    <form @submit.prevent="send()">
         <label>E-mail</label>
         <input
             v-model.lazy.trim="credentials.email"

@@ -11,19 +11,15 @@ services:
         target: /cockroach/cockroach-data
         volume:
           nocopy: true
-      - type: volume
+      - type: bind
         source: ./initialize.sh
-        target: ./initialize.sh
-        volume:
-          nocopy: true
+        target: /cockroach/initialize.sh
     command: bash ./initialize.sh
     depends_on:
       - cache
     ports:
-      - "0.0.0.0:81:8080"
+      - "0.0.0.0:8082:8080"
       - "0.0.0.0:26257:26257"
-    environment:
-      COCKROACH_DATABASE: basketball
 
   database-2:
     restart: always

@@ -1,6 +1,6 @@
 .idea
 
 api/node_modules
-panel/node_modules
+dashboard/node_module
 
-panel/.nuxt
+dashboard/.nuxt

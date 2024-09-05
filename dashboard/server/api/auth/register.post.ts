@@ -10,12 +10,12 @@ export default defineEventHandler(async (event) => {
         mode: "cors",
         credentials: "include",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         body: JSON.stringify({
             email,
-            password
-        })
+            password,
+        }),
     });
 
     return data.json();

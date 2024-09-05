@@ -11,6 +11,8 @@ services:
         target: /data
         volume:
           nocopy: true
+    ports:
+      - "0.0.0.0:6379:6379"
 
 volumes:
   cache:
