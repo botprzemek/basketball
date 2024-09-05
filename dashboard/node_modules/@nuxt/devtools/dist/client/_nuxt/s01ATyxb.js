@@ -1,1 +1,0 @@
-import{d as s,al as c,m as _,f as t,h as o,j as l,an as r,o as e,v as f}from"./eUQ_X7Id.js";import{l as i}from"./Bsa9pMTD.js";const m={class:"h-full w-full"},x=s({__name:"pinia",setup(p){const{connected:n}=c();return(u,d)=>{const a=r;return e(),_("div",m,[t(n)?(e(),o(t(i),{key:0})):(e(),o(a,{key:1},{default:l(()=>[f(" Connecting.... ")]),_:1}))])}}});export{x as default};

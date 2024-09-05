@@ -1,1 +1,0 @@
-import{d as t,o,m as s,G as a,p as n,aa as r,k as l,t as i}from"./eUQ_X7Id.js";const c={flex:"~ gap-3","items-center":""},u=t({__name:"NIconTitle",props:{icon:{},text:{}},setup(p){return(e,m)=>(o(),s("div",c,[e.icon?(o(),s("div",{key:0,class:a(e.icon)},null,2)):n("",!0),r(e.$slots,"default",{},()=>[l("div",null,i(e.text),1)])]))}});export{u as _};

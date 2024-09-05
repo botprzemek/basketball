@@ -1,6 +1,6 @@
-[submodule "api"]
-	path = api
-	url = https://github.com/botprzemek/basketball-api
 [submodule "dashboard"]
 	path = dashboard
 	url = https://github.com/botprzemek/basketball-dashboard
+[submodule "api"]
+	path = api
+	url = https://github.com/botprzemek/basketball-api
