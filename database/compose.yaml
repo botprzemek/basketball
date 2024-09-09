@@ -12,7 +12,7 @@ services:
         volume:
           nocopy: true
       - type: bind
-        source: ./initialize.sh
+        source: ./src/initialize.sh
         target: /cockroach/initialize.sh
     command: bash ./initialize.sh
     depends_on:
