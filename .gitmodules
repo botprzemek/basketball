@@ -6,6 +6,7 @@
 [submodule "database"]
 	path = database
 	url = https://github.com/botprzemek/basketball-database
+	branch = main
 
 [submodule "api"]
 	path = api
