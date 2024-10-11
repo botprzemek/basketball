@@ -14,12 +14,7 @@ services:
       - type: bind
         source: ./src/initialize.sh
         target: /cockroach/initialize.sh
-    command: bash ./initialize.sh
-    depends_on:
-      - cache
-    ports:
-      - "0.0.0.0:8082:8080"
-      - "0.0.0.0:26257:26257"
+    command: bash ./initialize.sh database-1
 
   database-2:
     restart: always
@@ -33,15 +28,10 @@ services:
         target: /cockroach/cockroach-data
         volume:
           nocopy: true
-    command: |
-      start
-      --insecure
-      --cache=25%
-      --max-sql-memory=25%
-      --locality=region=eu-central,zone=eu-poland-2
-      --join=database-1:26357,database-2:26357,database-3:26357
-      --listen-addr=database-2:26357
-      --sql-addr=database-2:26257
+      - type: bind
+        source: ./src/initialize.sh
+        target: /cockroach/initialize.sh
+    command: bash ./initialize.sh database-2
     depends_on:
       - database-1
 
@@ -57,15 +47,10 @@ services:
         target: /cockroach/cockroach-data
         volume:
           nocopy: true
-    command: |
-      start
-      --insecure
-      --cache=25%
-      --max-sql-memory=25%
-      --locality=region=eu-central,zone=eu-poland-3
-      --join=database-1:26357,database-2:26357,database-3:26357
-      --listen-addr=database-3:26357
-      --sql-addr=database-3:26257
+      - type: bind
+        source: ./src/initialize.sh
+        target: /cockroach/initialize.sh
+    command: bash ./initialize.sh database-3
     depends_on:
       - database-1
 
@@ -76,7 +61,6 @@ volumes:
     name: basketball-database-2
   database-3:
     name: basketball-database-3
-
 
 networks:
   database:

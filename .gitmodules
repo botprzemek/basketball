@@ -2,7 +2,18 @@
 	path = api
 	url = https://github.com/botprzemek/basketball-api
 	branch = main
+
 [submodule "dashboard"]
 	path = dashboard
 	url = https://github.com/botprzemek/basketball-dashboard
+	branch = main
+
+[submodule "database"]
+	path = database
+	url = https://github.com/botprzemek/basketball-database
+	branch = main
+
+[submodule "cache"]
+	path = cache
+	url = https://github.com/botprzemek/basketball-cache
 	branch = main
