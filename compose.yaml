@@ -1,10 +1,10 @@
 name: basketball
 
 include:
-  - ./database/compose.yaml
   - ./cache/compose.yaml
-#  - ./api/compose.yaml
-#  - ./dashboard/compose.yaml
+  - ./database/compose.yaml
+  - ./api/compose.yaml
+  - ./dashboard/compose.yaml
 
 networks:
   default:
