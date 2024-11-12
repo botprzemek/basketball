@@ -1,11 +1,108 @@
 name: basketball
 
-include:
-  - ./cache/compose.yaml
-  - ./database/compose.yaml
-  - ./api/compose.yaml
-  - ./dashboard/compose.yaml
+services:
+  cache:
+    image: "redis:alpine"
+    container_name: basketball-cache
+    restart: always
+    networks:
+      - cache
+    volumes:
+      - type: volume
+        source: cache
+        target: /data
+        volume:
+          nocopy: true
+
+  database-1:
+    image: "cockroachdb/cockroach:latest"
+    container_name: basketball-database-1
+    restart: always
+    networks:
+      - database
+    volumes:
+      - type: volume
+        source: database-1
+        target: /cockroach/cockroach-data
+        volume:
+          nocopy: true
+      - type: bind
+        source: ./src
+        target: /cockroach/src
+    command: bash ./src/initialize.sh database-1
+
+  database-2:
+    image: "cockroachdb/cockroach:latest"
+    container_name: basketball-database-2
+    restart: always
+    networks:
+      - database
+    volumes:
+      - type: volume
+        source: database-2
+        target: /cockroach/cockroach-data
+        volume:
+          nocopy: true
+      - type: bind
+        source: ./src
+        target: /cockroach/src
+    command: bash ./src/initialize.sh database-2
+    depends_on:
+      - database-1
+
+  database-3:
+    restart: always
+    networks:
+      - database
+    image: "cockroachdb/cockroach:latest"
+    container_name: basketball-database-3
+    volumes:
+      - type: volume
+        source: database-3
+        target: /cockroach/cockroach-data
+        volume:
+          nocopy: true
+      - type: bind
+        source: ./src
+        target: /cockroach/src
+    command: bash ./src/initialize.sh database-3
+    depends_on:
+      - database-1
+
+  api:
+    image: "ghcr.io/botprzemek/basketball-api:latest"
+    container_name: basketball-api
+    restart: always
+    networks:
+      - cache
+      - database
+      - gateway
+    ports:
+      - "0.0.0.0:60003:3000"
+
+#  dashboard:
+#    image: "ghcr.io/botprzemek/basketball-dashboard:latest"
+#    container_name: basketball-dashboard
+#    restart: always
+#    networks:
+#      - gateway
+#    ports:
+#      - "0.0.0.0:60004:3000"
+
+volumes:
+  cache:
+    name: basketball-cache
+  database-1:
+    name: basketball-database-1
+  database-2:
+    name: basketball-database-2
+  database-3:
+    name: basketball-database-3
 
 networks:
-  default:
-    name: basketball
+  cache:
+    name: basketball-cache
+  database:
+    name: basketball-database
+  gateway:
+    name: basketball-gateway
