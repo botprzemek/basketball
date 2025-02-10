@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "express": "^4.21.1",
-    "ioredis": "^5.4.1",
+    "ioredis": "^5.5.0",
     "jsonwebtoken": "^9.0.2",
     "postgres": "^3.4.5"
   },
