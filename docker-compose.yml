@@ -1,0 +1,95 @@
+networks:
+  basketball:
+    name: basketball
+    driver: bridge
+
+volumes:
+  database:
+  cache:
+
+services:
+  database:
+    image: scylladb/scylla:2026.1
+    container_name: basketball-database
+    command: [
+      "--overprovisioned", "1",
+      "--smp", "1",
+      "--memory", "750M",
+      "--developer-mode", "1"
+    ]
+    environment:
+      SCYLLA_ENABLE_AUTH: "false"
+    networks:
+      basketball:
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - database:/var/lib/scylla
+    user: 0:0
+
+  cache:
+    image: valkey/valkey:9.0-alpine
+    container_name: basketball-cache
+    entrypoint: valkey-server --appendonly yes --save 60 1
+    networks:
+      basketball:
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-h", "127.0.0.1", "-p", "6379", "PING"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - cache:/data
+
+  api:
+    build: ./api
+    container_name: basketball-api
+    environment:
+      SCYLLA_URL: "database:9042"
+      VALKEY_URL: "cache:6379"
+    networks:
+      basketball:
+    depends_on:
+      database:
+        condition: service_healthy
+      cache:
+        condition: service_started
+
+  app:
+    build: ./app
+    container_name: basketball-app
+    environment:
+      NUXT_APP_BASE_URL: "/app/"
+      NUXT_API_URL: "http://api:3000"
+    networks:
+      basketball:
+    depends_on:
+      api:
+        condition: service_started
+
+  monitoring:
+    image: prom/prometheus:v3.10.0-distroless
+    container_name: basketball-prometheus
+    networks:
+      basketball:
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  proxy:
+    image: nginx:1.29-alpine
+    container_name: basketball-nginx
+    networks: 
+      basketball:
+    depends_on:
+      app:
+        condition: service_started
+      api:
+        condition: service_started
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"

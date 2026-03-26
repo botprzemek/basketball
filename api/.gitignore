@@ -1,0 +1,8 @@
+# Rust dev/build outputs
+debug
+target
+
+# Misc
+**/*.rs.bk
+*.pdb
+**/mutants.out*/
