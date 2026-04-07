@@ -1,0 +1,131 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/refs/heads/main/schemas/devContainer.schema.json",
+  "name": "basketball",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.devcontainer.yml"],
+  "service": "devcontainer",
+  "runServices": ["database", "cache", "metrics", "monitoring", "devcontainer"],
+  "workspaceFolder": "/workspace/basketball",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/rust:1": {}
+  },
+  "postStartCommand": "sudo service nginx start",
+  "postCreateCommand": "cd ./app && npm install && cd ../api && cargo build && cargo install cargo-watch --locked && git config --global sequence.editor \"code --wait\"",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "NGINX Proxy",
+      "onAutoForward": "silent"
+    }
+  },
+  "remotePorts": [{ "containerPort": 3000, "localPort": 3000 }],
+  "remoteUser": "vscode",
+  "mounts": ["source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "BeardedBear.beardedtheme",
+        "bradlc.vscode-tailwindcss",
+        "dustypomerleau.rust-syntax",
+        "littensy.charmed-icons",
+        "ms-vscode.vscode-typescript-next",
+        "Nuxt.mdc",
+        "Nuxtr.nuxtr-vscode",
+        "oxc.oxc-vscode",
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "vitest.explorer",
+        "Vue.volar"
+      ],
+      "settings": {
+        "editor.detectIndentation": false,
+        "editor.minimap.enabled": false,
+        "editor.fontFamily": "Jetbrains Mono, monospace",
+        "editor.fontSize": 14,
+        "editor.formatOnSaveMode": "file",
+        "editor.formatOnSave": true,
+
+        "editor.stickyScroll.enabled": true,
+        "editor.guides.indentation": false,
+
+        "editor.tabSize": 4,
+
+        "editor.fontLigatures": false,
+        "editor.lineHeight": 1.6,
+        "editor.cursorBlinking": "solid",
+        "editor.cursorSmoothCaretAnimation": "on",
+        "editor.renderLineHighlight": "gutter",
+        "editor.gotoLocation.multipleDefinitions": "goto",
+
+        "explorer.autoReveal": true,
+        "explorer.compactFolders": true,
+        "explorer.confirmDelete": true,
+        "explorer.confirmDragAndDrop": true,
+        "explorer.enableDragAndDrop": true,
+        "explorer.sortOrder": "default",
+        "explorer.excludeGitIgnore": false,
+
+        "workbench.activityBar.location": "top",
+        "workbench.colorTheme": "Bearded Theme HC Chocolate Espresso",
+        "workbench.editor.empty.hint": "hidden",
+        "workbench.iconTheme": "charmed-icons",
+        "workbench.secondarySideBar.defaultVisibility": "hidden",
+        "workbench.tips.enabled": false,
+
+        "dev.containers.showLogsAfterRefresh": false,
+
+        "task.showOutput": "never",
+        "task.reveal": "never",
+
+        "remote.autoForwardPorts": false,
+        "terminal.integrated.echoDotConsole": false,
+
+        "terminal.integrated.fontFamily": "Jetbrains Mono, monospace",
+        "terminal.integrated.fontSize": 14,
+        "terminal.integrated.lineHeight": 1.1,
+        "terminal.integrated.letterSpacing": 0,
+        "terminal.integrated.cursorBlinking": true,
+        "terminal.integrated.cursorStyle": "line",
+        "terminal.integrated.tabs.enabled": true,
+        "terminal.integrated.showExitAlert": false,
+        "terminal.integrated.drawBoldTextInBrightColors": true,
+        "terminal.integrated.gpuAcceleration": "on",
+        "terminal.integrated.fontLigatures.enabled": false,
+        "terminal.integrated.softWrapping": false,
+        "terminal.integrated.wordWrap": "off",
+
+        "chat.agent.enabled": false,
+        "chat.agentsControl.enabled": false,
+        "chat.checkpoints.enabled": false,
+        "chat.extensionTools.enabled": false,
+        "chat.tips.enabled": false,
+        "chat.disableAIFeatures": true,
+
+        "files.autoSave": "onFocusChange",
+        "files.exclude": {
+          "**/.nuxt": true,
+          "**/.output": true,
+          "**/node_modules": true
+        },
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "never",
+          "source.fixAll.oxc": "always",
+          "source.fixAll": "always"
+        },
+        "oxc.enable": true,
+        "oxc.enable.oxfmt": true,
+        "oxc.enable.oxlint": true,
+        "oxc.fixKind": "all",
+        "oxc.trace.server": "verbose",
+        "oxc.typeAware": true,
+        "oxc.fmt.configPath": "./app",
+
+        "rust-analyzer.check.command": "clippy",
+        "rust-analyzer.cargo.buildScripts.enable": true,
+        "#js/ts.suggest.completeFunctionCalls#": true,
+        "#js/ts.preferences.importModuleSpecifier#": "non-relative"
+      }
+    }
+  }
+}

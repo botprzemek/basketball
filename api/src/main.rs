@@ -1,30 +1,19 @@
-use axum::{
-    routing::get,
-    Json,
-    Router,
-};
-use serde::Serialize;
-use std::net::SocketAddr;
+mod adapter;
+mod core;
+mod domain;
 
-#[derive(Serialize)]
-struct ResponseMessage {
-    message: String,
-}
+use core::CoreBuilder;
 
 #[tokio::main]
-async fn main() {
-    let app = Router::new()
-        .route("/", get(handler));
+async fn main() -> anyhow::Result<()> {
+    let core = CoreBuilder::new()?
+        .registry()
+        .await?
+        .services()
+        .await?
+        .gateway()
+        .await?
+        .build()?;
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    println!("Listening on http://{}", addr);
-
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
-}
-
-async fn handler() -> Json<ResponseMessage> {
-    Json(ResponseMessage {
-        message: "Hello world!".to_string(),
-    })
+    core.run().await
 }
