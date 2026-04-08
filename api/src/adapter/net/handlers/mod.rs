@@ -9,3 +9,9 @@ use uuid::Uuid;
 pub struct Params {
     id: Uuid,
 }
+
+#[derive(Deserialize, Default)]
+pub struct Pagination {
+    pub page: Option<usize>,
+    pub per_page: Option<usize>,
+}

@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{FromRef, Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, patch, post},
@@ -11,26 +11,19 @@ use std::fmt::Display;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::domain::applications::AccountApplication;
-use crate::domain::entities::AccountPartial;
-use crate::domain::ports::AccountPort;
-use crate::{
-    adapter::{net::handlers::Params, repositories::AccountRepository},
-    domain::entities::Account,
+use crate::adapter::{
+    Services,
+    net::handlers::{Pagination, Params},
+};
+use crate::domain::{
+    entities::Account,
 };
 
-fn internal_error<E: Display>(err: E) -> (StatusCode, String) {
-    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+fn internal_error<E: Display>(error: E) -> (StatusCode, String) {
+    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }
 
 pub struct AccountHandler;
-
-#[derive(Clone)]
-pub struct AccountState<P: AccountPort> {
-    pub account_service: Arc<AccountApplication<P>>,
-}
-
-// TODO
 
 #[derive(serde::Serialize)]
 pub struct AccountResponse {
@@ -56,16 +49,6 @@ pub struct UpdateAccountPayload {
     pub last_name: Option<String>,
 }
 
-impl From<UpdateAccountPayload> for AccountPartial {
-    fn from(payload: UpdateAccountPayload) -> Self {
-        Self {
-            password: payload.password,
-            first_name: payload.first_name,
-            last_name: payload.last_name,
-        }
-    }
-}
-
 impl From<Account> for AccountResponse {
     fn from(account: Account) -> Self {
         Self {
@@ -79,91 +62,102 @@ impl From<Account> for AccountResponse {
     }
 }
 
-impl<P: AccountPort> FromRef<AccountState<P>> for Arc<AccountApplication<P>> {
-    fn from_ref(state: &AccountState<P>) -> Self {
-        state.account_service.clone()
-    }
-}
-
 impl AccountHandler {
-    pub async fn get<P>(
-        State(account_service): State<Arc<AccountApplication<P>>>,
-    ) -> anyhow::Result<impl IntoResponse, (StatusCode, String)>
-    where
-        P: AccountPort + Send + Sync + 'static,
-    {
-        let result = account_service.find_all().await.map_err(internal_error)?;
+    pub async fn get(
+        State(services): State<Arc<Services>>,
+        Query(Pagination { page, per_page}): Query<Pagination>
+    ) -> impl IntoResponse {
+        let accounts = match services.account().find_all(page, per_page).await {
+            Ok(accounts) => accounts,
+            Err(error) => return internal_error(error).into_response(),
+        };
 
-        Ok((StatusCode::OK, Json(result)).into_response())
+        let result = accounts
+            .into_iter()
+            .map(AccountResponse::from)
+            .collect::<Vec<AccountResponse>>();
+
+        (StatusCode::OK, Json(result)).into_response()
     }
 
-    pub async fn get_by_id<P>(
-        State(account_service): State<Arc<AccountApplication<P>>>,
+    pub async fn get_by_id(
+        State(services): State<Arc<Services>>,
         Path(Params { id }): Path<Params>,
-    ) -> anyhow::Result<impl IntoResponse, (StatusCode, String)>
-    where
-        P: AccountPort + Send + Sync + 'static,
-    {
-        let result = account_service
-            .find_by_id(id)
-            .await
-            .map_err(internal_error)?;
+    ) -> impl IntoResponse {
+        let account = match services.account().find_by_id(id).await {
+            Ok(account) => account,
+            Err(error) => return internal_error(error).into_response(),
+        };
 
-        Ok((StatusCode::OK, Json(result)).into_response())
+        let result = account.map(AccountResponse::from);
+
+        match result {
+            Some(result) => (StatusCode::OK, Json(result)).into_response(),
+            None => (StatusCode::NOT_FOUND,).into_response(),
+        }
     }
 
-    pub async fn post<P>(
-        State(account_service): State<Arc<AccountApplication<P>>>,
+    pub async fn post(
+        State(services): State<Arc<Services>>,
         Json(payload): Json<CreateAccountPayload>,
-    ) -> anyhow::Result<impl IntoResponse, (StatusCode, String)>
-    where
-        P: AccountPort + Send + Sync + 'static,
-    {
-        let result = account_service
+    ) -> impl IntoResponse {
+        let account = match services
+            .account()
             .create(payload.password, payload.first_name, payload.last_name)
             .await
-            .map_err(internal_error)?;
+        {
+            Ok(account) => account,
+            Err(error) => return internal_error(error).into_response(),
+        };
 
-        Ok((StatusCode::OK, Json(result)).into_response())
+        let result = AccountResponse::from(account);
+
+        (StatusCode::OK, Json(result)).into_response()
     }
 
-    pub async fn patch_by_id<P>(
-        State(account_service): State<Arc<AccountApplication<P>>>,
+    pub async fn patch_by_id(
+        State(services): State<Arc<Services>>,
         Path(Params { id }): Path<Params>,
         Json(payload): Json<UpdateAccountPayload>,
-    ) -> anyhow::Result<impl IntoResponse, (StatusCode, String)>
-    where
-        P: AccountPort + Send + Sync + 'static,
-    {
-        let result = account_service
-            .update(id, AccountPartial::from(payload))
+    ) -> impl IntoResponse {
+        let account = match services
+            .account()
+            .update(id, payload.password, payload.first_name, payload.last_name)
             .await
-            .map_err(internal_error)?;
+        {
+            Ok(account) => account,
+            Err(error) => return internal_error(error).into_response(),
+        };
 
-        Ok((StatusCode::OK, Json(result)).into_response())
+        let result = account.map(AccountResponse::from);
+
+        match result {
+            Some(result) => (StatusCode::OK, Json(result)).into_response(),
+            None => (StatusCode::NOT_FOUND,).into_response(),
+        }
     }
 
-    pub async fn delete_by_id<P>(
-        State(account_service): State<Arc<AccountApplication<P>>>,
+    pub async fn delete_by_id(
+        State(services): State<Arc<Services>>,
         Path(Params { id }): Path<Params>,
-    ) -> anyhow::Result<impl IntoResponse, (StatusCode, String)>
-    where
-        P: AccountPort + Send + Sync + 'static,
-    {
-        account_service.delete(id).await.map_err(internal_error)?;
+    ) -> impl IntoResponse {
+        let account = services.account().delete(id).await;
 
-        Ok((StatusCode::NO_CONTENT,).into_response())
+        let result = account;
+
+        match result {
+            Ok(_) => (StatusCode::NO_CONTENT,).into_response(),
+            Err(error) => internal_error(error).into_response(),
+        }
     }
 
-    pub fn v1(account_service: Arc<AccountApplication<AccountRepository>>) -> Router {
-        let state = AccountState { account_service };
-
+    pub fn v1(services: Arc<Services>) -> Router {
         Router::new()
             .route("/", get(AccountHandler::get))
             .route("/", post(AccountHandler::post))
             .route("/{id}", get(AccountHandler::get_by_id))
             .route("/{id}", patch(AccountHandler::patch_by_id))
             .route("/{id}", delete(AccountHandler::delete_by_id))
-            .with_state(state)
+            .with_state(services)
     }
 }

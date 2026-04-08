@@ -10,10 +10,13 @@ use redis::{AsyncCommands, aio::MultiplexedConnection};
 use std::fmt::Display;
 use std::sync::Arc;
 
-fn internal_error<E: Display>(err: E) -> (StatusCode, String) {
-    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+use crate::adapter::Services;
+
+fn internal_error<E: Display>(error: E) -> (StatusCode, String) {
+    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }
 
+#[derive(Clone)]
 pub struct ResponseCache {
     connection: MultiplexedConnection,
     prefix: String,
@@ -66,10 +69,12 @@ impl ResponseCache {
 }
 
 pub async fn layer(
-    State(cache): State<Arc<ResponseCache>>,
+    State(services): State<Arc<Services>>,
     request: Request<Body>,
     next: Next,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+) -> impl IntoResponse {
+    let cache = services.cache();
+    let method = request.method().clone();
     let path = request
         .uri()
         .path()
@@ -77,45 +82,49 @@ pub async fn layer(
         .take(4)
         .collect::<Vec<&str>>()
         .join("/");
-    let method = request.method().clone();
 
     if method == Method::GET
-        && let Ok(Some(cached_body)) = cache.get_response(&path).await
+        && let Ok(Some(cached)) = cache.get_response(&path).await
     {
-        return Response::builder()
+        return match Response::builder()
             .header("Content-Type", "application/json")
             .header("Cache-Control", format!("max-age={}", cache.ttl))
-            .body(Body::from(cached_body))
-            .map_err(internal_error);
+            .body(Body::from(cached))
+        {
+            Ok(response) => response,
+            Err(error) => internal_error(error).into_response(),
+        };
     }
 
     let response = next.run(request).await;
     if !response.status().is_success() {
-        return Ok(response);
+        return response;
     }
 
-    let cache_clone = cache.clone();
-    let path_clone = path.clone();
+    let cache = cache.clone();
+    let path = path.clone();
 
     if method != Method::GET {
         tokio::spawn(async move {
-            let _ = cache_clone.invalidate_response(&path_clone).await;
-            println!("INVALIDATED!");
+            let _ = cache.invalidate_response(&path).await;
         });
 
-        return Ok(response);
+        return response;
     }
 
     let (parts, body) = response.into_parts();
-    let collected = body.collect().await.map_err(internal_error)?;
-    let bytes = collected.to_bytes();
-    let bytes_cloned = bytes.clone();
 
-    tokio::spawn(async move {
-        let _ = cache_clone
-            .set_response(&path_clone, bytes_cloned.to_vec())
-            .await;
-    });
+    match body.collect().await {
+        Ok(collected) => {
+            let bytes = collected.to_bytes();
+            let bytes_cloned = bytes.clone();
 
-    Ok(Response::from_parts(parts, Body::from(bytes)))
+            tokio::spawn(async move {
+                let _ = cache.set_response(&path, bytes_cloned.to_vec()).await;
+            });
+
+            Response::from_parts(parts, Body::from(bytes))
+        }
+        Err(error) => internal_error(error).into_response(),
+    }
 }

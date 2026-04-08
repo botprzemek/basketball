@@ -1,26 +1,25 @@
 use chrono::Utc;
-use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::adapter::PasswordService;
-use crate::domain::entities::{Account, AccountPartial};
+use crate::domain::entities::Account;
 use crate::domain::ports::AccountPort;
+use crate::domain::ports::PasswordPort;
 
-pub struct AccountApplication<P: AccountPort> {
-    account_service: Arc<P>,
-    password_service: Arc<PasswordService>,
+pub struct AccountApplication<A: AccountPort, P: PasswordPort> {
+    account_service: A,
+    password_service: P,
 }
 
-impl<P: AccountPort> AccountApplication<P> {
-    pub fn new(account_service: Arc<P>, password_service: Arc<PasswordService>) -> Self {
+impl<A: AccountPort, P: PasswordPort> AccountApplication<A, P> {
+    pub fn new(account_service: A, password_service: P) -> Self {
         Self {
             account_service,
             password_service,
         }
     }
 
-    pub async fn find_all(&self) -> anyhow::Result<Vec<Account>> {
-        self.account_service.select_all().await
+    pub async fn find_all(&self, page: Option<usize>, _per_page: Option<usize>) -> anyhow::Result<Vec<Account>> {
+        self.account_service.select_all(page).await
     }
 
     pub async fn find_by_id(&self, id: Uuid) -> anyhow::Result<Option<Account>> {
@@ -42,37 +41,41 @@ impl<P: AccountPort> AccountApplication<P> {
     pub async fn update(
         &self,
         id: Uuid,
-        account_partial: AccountPartial,
+        password: Option<String>,
+        first_name: Option<String>,
+        last_name: Option<String>,
     ) -> anyhow::Result<Option<Account>> {
         let mut account = match self.account_service.select_by_id(id).await? {
             Some(account) => account,
             None => return Ok(None),
         };
 
-        let mut changed = false;
+        let mut has_changed = false;
 
-        if let Some(first_name) = account_partial.first_name {
+        if let Some(password) = password {
+            account.password_hash = self.password_service.generate(password).await?;
+            has_changed = true;
+        }
+
+        if let Some(first_name) = first_name {
             account.first_name = first_name;
-            changed = true;
+            has_changed = true;
         }
 
-        if let Some(last_name) = account_partial.last_name {
+        if let Some(last_name) = last_name {
             account.last_name = last_name;
-            changed = true;
+            has_changed = true;
         }
 
-        if !changed {
-            return Ok(Some(account));
+        if has_changed {
+            account.updated_at = Some(Utc::now());
+            account = self.account_service.update(account).await?;
         }
-
-        account.updated_at = Some(Utc::now());
-
-        let account = self.account_service.update(account).await?;
 
         Ok(Some(account))
     }
 
-    pub async fn update_password(&self, id: Uuid, password: String) -> anyhow::Result<()> {
+    pub async fn _update_password(&self, id: Uuid, password: String) -> anyhow::Result<()> {
         let Some(mut account) = self.find_by_id(id).await? else {
             return Ok(());
         };
@@ -85,22 +88,22 @@ impl<P: AccountPort> AccountApplication<P> {
         Ok(())
     }
 
-    pub async fn delete(&self, id: Uuid) -> anyhow::Result<()> {
-        self.account_service.delete(id).await
-    }
-
-    pub async fn verify_password(&self, id: Uuid, password: String) -> anyhow::Result<bool> {
+    pub async fn _verify_password(&self, id: Uuid, password: String) -> anyhow::Result<bool> {
         let Some(account) = self.find_by_id(id).await? else {
             return Ok(false);
         };
 
         match self
             .password_service
-            .verify(password, account.password_hash)
+            ._verify(password, account.password_hash)
             .await
         {
             Ok(_) => Ok(true),
             Err(_) => Ok(false),
         }
+    }
+
+    pub async fn delete(&self, id: Uuid) -> anyhow::Result<()> {
+        self.account_service.delete(id).await
     }
 }

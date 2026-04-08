@@ -8,5 +8,4 @@ mod services;
 pub use config::Config;
 pub use net::Gateway;
 pub use registry::Registry;
-pub use services::PasswordService;
 pub use services::Services;

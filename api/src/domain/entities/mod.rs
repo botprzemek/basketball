@@ -1,3 +1,3 @@
 mod account;
 
-pub use account::{Account, AccountPartial};
+pub use account::Account;

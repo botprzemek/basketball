@@ -28,7 +28,7 @@ impl Gateway {
 
     pub fn with_v1(mut self) -> Self {
         let routes_v1 =
-            Router::new().nest("/accounts", AccountHandler::v1(self.services.account()));
+            Router::new().nest("/accounts", AccountHandler::v1(self.services.clone()));
 
         self.router = self.router.nest("/api/v1", routes_v1);
 
@@ -36,18 +36,44 @@ impl Gateway {
     }
 
     pub fn with_cache(mut self) -> Self {
-        let layer = from_fn_with_state(self.services.cache(), cache_layer);
+        let layer = from_fn_with_state(self.services.clone(), cache_layer);
 
         self.router = self.router.layer(layer);
 
         self
     }
 
+    async fn graceful_shutdown() {
+        let ctrl_c = async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("Failed to install Ctrl+C handler");
+        };
+
+        #[cfg(unix)]
+        let terminate = async {
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("Failed to install SIGNAL handler")
+                .recv()
+                .await;
+        };
+
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
+
+        tokio::select! {
+            _ = ctrl_c => { println!("\nGracefully exiting (CTRL+C)"); },
+            _ = terminate => { println!("\nGracefully exiting (SIGTERM)"); },
+        }
+    }
+
     pub async fn run(&self) -> anyhow::Result<()> {
         let listener = TcpListener::bind(&self.address).await?;
 
         println!("Listening on http://{}", self.address);
-        axum::serve(listener, self.router.clone()).await?;
+        axum::serve(listener, self.router.clone())
+            .with_graceful_shutdown(Self::graceful_shutdown())
+            .await?;
 
         Ok(())
     }

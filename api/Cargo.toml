@@ -1,7 +1,13 @@
 [package]
-name = "basketball-api"
+name = "basketball_api"
 version = "0.1.0"
 edition = "2024"
+
+[profile.release]
+panic = "abort"
+opt-level = 3
+codegen-units = 1
+lto = "fat"
 
 [dependencies]
 anyhow = { version = "1.0.102", features = [] }

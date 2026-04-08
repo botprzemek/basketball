@@ -3,14 +3,14 @@ use std::sync::Arc;
 use crate::adapter::{Config, Gateway, Registry, Services};
 
 pub struct Core {
-    gateway: Arc<Gateway>,
+    gateway: Gateway,
 }
 
 pub struct CoreBuilder {
     config: Arc<Config>,
-    registry: Option<Arc<Registry>>,
+    registry: Option<Registry>,
     services: Option<Arc<Services>>,
-    gateway: Option<Arc<Gateway>>,
+    gateway: Option<Gateway>,
 }
 
 impl Core {
@@ -34,7 +34,7 @@ impl CoreBuilder {
     pub async fn registry(&mut self) -> anyhow::Result<&mut Self> {
         let registry = Registry::new(self.config.as_ref()).await?;
 
-        self.registry = Some(Arc::new(registry));
+        self.registry = Some(registry);
 
         Ok(self)
     }
@@ -43,7 +43,6 @@ impl CoreBuilder {
         let registry = self
             .registry
             .as_ref()
-            .cloned()
             .ok_or_else(|| anyhow::anyhow!("Registry not initialized"))?;
         let services = Services::new(registry);
 
@@ -55,15 +54,15 @@ impl CoreBuilder {
     pub async fn gateway(&mut self) -> anyhow::Result<&mut Self> {
         let services = self
             .services
-            .as_ref()
-            .cloned()
+            .take()
             .ok_or_else(|| anyhow::anyhow!("Services not initialized"))?;
+
         let gateway = Gateway::new(self.config.as_ref(), services)
             .await?
-            .with_v1();
-        // .with_cache();
+            .with_v1()
+            .with_cache();
 
-        self.gateway = Some(Arc::new(gateway));
+        self.gateway = Some(gateway);
 
         Ok(self)
     }
@@ -71,8 +70,7 @@ impl CoreBuilder {
     pub fn build(&mut self) -> anyhow::Result<Core> {
         let gateway = self
             .gateway
-            .as_ref()
-            .cloned()
+            .take()
             .ok_or_else(|| anyhow::anyhow!("Gateway not initialized"))?;
 
         Ok(Core { gateway })
