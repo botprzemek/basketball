@@ -112,7 +112,7 @@ impl AccountHandler {
 
         let result = AccountResponse::from(account);
 
-        (StatusCode::OK, Json(result)).into_response()
+        (StatusCode::CREATED, Json(result)).into_response()
     }
 
     pub async fn patch_by_id(
@@ -141,11 +141,7 @@ impl AccountHandler {
         State(services): State<Arc<Services>>,
         Path(Params { id }): Path<Params>,
     ) -> impl IntoResponse {
-        let account = services.account().delete(id).await;
-
-        let result = account;
-
-        match result {
+        match services.account().delete(id).await {
             Ok(_) => (StatusCode::NO_CONTENT,).into_response(),
             Err(error) => internal_error(error).into_response(),
         }

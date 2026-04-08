@@ -86,10 +86,6 @@ impl AccountRepository {
             .await?;
 
         session
-            .query_unpaged("DROP TABLE IF EXISTS api.accounts", ())
-            .await?;
-
-        session
             .query_unpaged(
                 "CREATE TABLE IF NOT EXISTS api.accounts (
                 id uuid PRIMARY KEY,
@@ -103,45 +99,6 @@ impl AccountRepository {
                 (),
             )
             .await?;
-
-        let first_names = [
-            "Jan", "Anna", "Piotr", "Maria", "Marek", "Ewa", "Adam", "Olga", "Jacek", "Iga",
-            "Kamil", "Marta", "Leon", "Sara", "Hugo", "Nina",
-        ];
-        let last_names = [
-            "Nowak",
-            "Kowalski",
-            "Wiśniewski",
-            "Wójcik",
-            "Kowalczyk",
-            "Kamiński",
-            "Zieliński",
-            "Szymański",
-            "Woźniak",
-            "Dąbrowski",
-            "Kozłowski",
-            "Mazur",
-            "Kwiatkowski",
-            "Krawczyk",
-            "Kaczmarek",
-            "Zając",
-        ];
-
-        let insert_stmt = session.prepare(
-            "INSERT INTO api.accounts (id, password_hash, first_name, last_name, is_active, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, ?, toTimestamp(now()), NULL)"
-        ).await?;
-
-        for i in 0..16 {
-            let id = uuid::Uuid::new_v4();
-            let first_name = first_names[i];
-            let last_name = last_names[i % last_names.len()];
-            let hash = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$Wv6...";
-
-            session
-                .execute_unpaged(&insert_stmt, (id, hash, first_name, last_name, true))
-                .await?;
-        }
 
         let select_all = session
             .prepare(
@@ -235,7 +192,7 @@ impl AccountRepository {
 #[async_trait]
 impl AccountPort for AccountRepository {
     async fn select_all(&self, page_size: Option<usize>) -> anyhow::Result<Vec<Account>> {
-        let mut statement = self.select_all.clone();    
+        let mut statement = self.select_all.clone();
         let values = ();
 
         if let Some(page_size) = page_size {
@@ -244,7 +201,7 @@ impl AccountPort for AccountRepository {
 
         let result = self
             .session
-            .execute_iter(self.select_all.clone(), &values)
+            .execute_iter(statement, &values)
             .await?
             .rows_stream::<AccountRow>()?
             .map_ok(Account::from)

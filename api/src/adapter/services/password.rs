@@ -32,7 +32,7 @@ impl PasswordPort for PasswordService {
         .await?
     }
 
-    async fn _verify(&self, password: String, password_hash: String) -> anyhow::Result<()> {
+    async fn verify(&self, password: String, password_hash: String) -> anyhow::Result<()> {
         let argon2 = self.argon2.clone();
 
         tokio::task::spawn_blocking(move || {
