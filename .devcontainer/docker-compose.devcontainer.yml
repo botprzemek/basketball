@@ -1,0 +1,25 @@
+services:
+  devcontainer:
+    image: basketball/devcontainer:0.1.0
+    build: ./.devcontainer
+    container_name: basketball-devcontainer
+    networks:
+      basketball:
+        aliases:
+          - api
+          - app
+    volumes:
+      - .:/workspace/basketball:cached
+      - ./.devcontainer/nginx/conf.d:/etc/nginx/conf.d:cached
+    tty: true
+    stdin_open: true
+    command: /bin/bash
+
+  api:
+    profiles: ["donotstart"]
+  
+  app:
+    profiles: ["donotstart"]
+
+  proxy:
+    profiles: ["donotstart"]

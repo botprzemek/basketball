@@ -1,0 +1,149 @@
+networks:
+  basketball:
+    name: basketball
+    driver: bridge
+  database:
+    name: basketball-database
+
+volumes:
+  database:
+    name: basketball-database
+  database-1:
+    name: basketball-database-1
+  database-2:
+    name: basketball-database-2
+  database-3:
+    name: basketball-database-3
+  cache:
+    name: basketball-cache
+  grafana:
+    name: basketball-grafana
+
+x-db-common: &db-common
+  image: "cockroachdb/cockroach:latest-v23.2"
+  restart: always
+  networks:
+    - database
+  command: start --insecure --join=database-1,database-2,database-3
+
+services:
+  database:
+    image: scylladb/scylla:2026.1
+    container_name: basketball-database
+    command: ["--overprovisioned", "1", "--smp", "1", "--memory", "750M", "--developer-mode", "1"]
+    environment:
+      SCYLLA_ENABLE_AUTH: "false"
+    networks:
+      basketball:
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - database:/var/lib/scylla
+    user: 0:0
+
+  database-1:
+    <<: *db-common
+    container_name: basketball-database-1
+    volumes:
+      - database-1:/cockroach/cockroach-data
+    command: start --insecure --join=database-1,database-2,database-3
+
+  database-2:
+    <<: *db-common
+    container_name: basketball-database-2
+    volumes:
+      - database-2:/cockroach/cockroach-data
+    depends_on:
+      - database-1
+
+  database-3:
+    <<: *db-common
+    container_name: basketball-database-3
+    volumes:
+      - database-3:/cockroach/cockroach-data
+    depends_on:
+      - database-1
+
+  init-database:
+    image: "cockroachdb/cockroach:latest-v23.2"
+    networks:
+      - database
+    command: init --insecure --host=database-1
+    depends_on:
+      - database-1
+
+  cache:
+    image: valkey/valkey:9.0-alpine
+    container_name: basketball-cache
+    entrypoint: valkey-server --appendonly yes --save 60 1
+    networks:
+      basketball:
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-h", "127.0.0.1", "-p", "6379", "PING"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - cache:/data
+
+  api:
+    image: basketball/api:0.1.0
+    build: ./api
+    container_name: basketball-api
+    environment:
+      SCYLLA_URL: "database:9042"
+      VALKEY_URL: "cache:6379"
+    networks:
+      basketball:
+    depends_on:
+      database:
+        condition: service_healthy
+      cache:
+        condition: service_started
+
+  app:
+    image: basketball/app:0.1.0
+    build: ./app
+    container_name: basketball-app
+    environment:
+      NUXT_APP_BASE_URL: "/app/"
+      NUXT_API_URL: "http://api:3000"
+    networks:
+      basketball:
+    depends_on:
+      api:
+        condition: service_started
+
+  metrics:
+    image: grafana/grafana:13.0.0-23943897787-ubuntu
+    container_name: basketball-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000/metrics
+    volumes:
+      - grafana:/var/lib/grafana
+    networks:
+      basketball:
+
+  monitoring:
+    image: prom/prometheus:v3.10.0-distroless
+    container_name: basketball-prometheus
+    networks:
+      basketball:
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  proxy:
+    image: nginx:1.29-alpine
+    container_name: basketball-nginx
+    networks:
+      basketball:
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"

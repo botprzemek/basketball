@@ -1,0 +1,13 @@
+[build]
+incremental = true
+
+[env]
+SERVER_HOST = "0.0.0.0"
+SERVER_PORT = "3001"
+
+DATABASE_HOST = "basketball-database"
+DATABASE_PORT = "9042"
+
+CACHE_HOST = "basketball-cache"
+CACHE_PORT = "6379"
+CACHE_TTL = "3600"
