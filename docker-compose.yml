@@ -2,22 +2,35 @@ networks:
   basketball:
     name: basketball
     driver: bridge
+  database:
+    name: basketball-database
 
 volumes:
   database:
+    name: basketball-database
+  database-1:
+    name: basketball-database-1
+  database-2:
+    name: basketball-database-2
+  database-3:
+    name: basketball-database-3
   cache:
+    name: basketball-cache
   grafana:
+    name: basketball-grafana
+
+x-db-common: &db-common
+  image: "cockroachdb/cockroach:latest-v23.2"
+  restart: always
+  networks:
+    - database
+  command: start --insecure --join=database-1,database-2,database-3
 
 services:
   database:
     image: scylladb/scylla:2026.1
     container_name: basketball-database
-    command: [
-      "--overprovisioned", "1",
-      "--smp", "1",
-      "--memory", "750M",
-      "--developer-mode", "1"
-    ]
+    command: ["--overprovisioned", "1", "--smp", "1", "--memory", "750M", "--developer-mode", "1"]
     environment:
       SCYLLA_ENABLE_AUTH: "false"
     networks:
@@ -30,6 +43,37 @@ services:
     volumes:
       - database:/var/lib/scylla
     user: 0:0
+
+  database-1:
+    <<: *db-common
+    container_name: basketball-database-1
+    volumes:
+      - database-1:/cockroach/cockroach-data
+    command: start --insecure --join=database-1,database-2,database-3
+
+  database-2:
+    <<: *db-common
+    container_name: basketball-database-2
+    volumes:
+      - database-2:/cockroach/cockroach-data
+    depends_on:
+      - database-1
+
+  database-3:
+    <<: *db-common
+    container_name: basketball-database-3
+    volumes:
+      - database-3:/cockroach/cockroach-data
+    depends_on:
+      - database-1
+
+  init-database:
+    image: "cockroachdb/cockroach:latest-v23.2"
+    networks:
+      - database
+    command: init --insecure --host=database-1
+    depends_on:
+      - database-1
 
   cache:
     image: valkey/valkey:9.0-alpine
@@ -97,7 +141,7 @@ services:
   proxy:
     image: nginx:1.29-alpine
     container_name: basketball-nginx
-    networks: 
+    networks:
       basketball:
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro

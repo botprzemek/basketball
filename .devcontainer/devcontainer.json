@@ -3,13 +3,23 @@
   "name": "basketball",
   "dockerComposeFile": ["../docker-compose.yml", "docker-compose.devcontainer.yml"],
   "service": "devcontainer",
-  "runServices": ["database", "cache", "metrics", "monitoring", "devcontainer"],
+  "runServices": [
+    "database",
+    "database-1",
+    "database-2",
+    "database-3",
+    "init-database",
+    "cache",
+    "metrics",
+    "monitoring",
+    "devcontainer"
+  ],
   "workspaceFolder": "/workspace/basketball",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/devcontainers/features/rust:1": {}
   },
-  "postStartCommand": "sudo service nginx start",
+  "postStartCommand": "sudo service nginx start && exit",
   "postCreateCommand": "cd ./app && npm install && cd ../api && cargo build && cargo install cargo-watch --locked && git config --global sequence.editor \"code --wait\"",
   "forwardPorts": [3000],
   "portsAttributes": {
