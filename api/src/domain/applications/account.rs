@@ -18,8 +18,8 @@ impl<A: AccountPort, P: PasswordPort> AccountApplication<A, P> {
         }
     }
 
-    pub async fn find_all(&self, page: Option<usize>, _per_page: Option<usize>) -> anyhow::Result<Vec<Account>> {
-        self.account_service.select_all(page).await
+    pub async fn find_all(&self) -> anyhow::Result<Vec<Account>> {
+        self.account_service.select_all().await
     }
 
     pub async fn find_by_id(&self, id: Uuid) -> anyhow::Result<Option<Account>> {
@@ -75,7 +75,7 @@ impl<A: AccountPort, P: PasswordPort> AccountApplication<A, P> {
         Ok(Some(account))
     }
 
-    pub async fn _update_password(&self, id: Uuid, password: String) -> anyhow::Result<()> {
+    pub async fn update_password(&self, id: Uuid, password: String) -> anyhow::Result<()> {
         let Some(mut account) = self.find_by_id(id).await? else {
             return Ok(());
         };
@@ -88,14 +88,14 @@ impl<A: AccountPort, P: PasswordPort> AccountApplication<A, P> {
         Ok(())
     }
 
-    pub async fn _verify_password(&self, id: Uuid, password: String) -> anyhow::Result<bool> {
+    pub async fn verify_password(&self, id: Uuid, password: String) -> anyhow::Result<bool> {
         let Some(account) = self.find_by_id(id).await? else {
             return Ok(false);
         };
 
         match self
             .password_service
-            ._verify(password, account.password_hash)
+            .verify(password, account.password_hash)
             .await
         {
             Ok(_) => Ok(true),

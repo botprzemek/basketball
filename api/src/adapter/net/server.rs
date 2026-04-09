@@ -3,10 +3,12 @@ use axum::middleware::from_fn_with_state;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
-use crate::adapter::Services;
-use crate::adapter::config::ServerConfig;
-use crate::adapter::net::handlers::AccountHandler;
-use crate::adapter::net::middleware::cache_layer;
+use crate::adapter::{
+    Services,
+    config::ServerConfig,
+    net::handlers::{AuthHandler,AccountHandler, OrganizationsHandler, IdentitiesHandler},
+    net::middleware::cache_layer,
+};
 
 pub struct Gateway {
     address: String,
@@ -27,8 +29,11 @@ impl Gateway {
     }
 
     pub fn with_v1(mut self) -> Self {
-        let routes_v1 =
-            Router::new().nest("/accounts", AccountHandler::v1(self.services.clone()));
+        let routes_v1 = Router::new()
+            .nest("/auth", AuthHandler::v1(self.services.clone()))
+            .nest("/accounts", AccountHandler::v1(self.services.clone()))
+            .nest("/organizations", OrganizationsHandler::v1(self.services.clone()))
+            .nest("/identities", IdentitiesHandler::v1(self.services.clone()));
 
         self.router = self.router.nest("/api/v1", routes_v1);
 

@@ -23,4 +23,5 @@ scylla = { version = "1.5.0", features = ["chrono-04"] }
 serde = { version = "1.0.2", features = ["derive"] }
 serde_json = { version = "1.0.149", features = ["std"] }
 tokio = { version = "1.12.0", features = ["full"] }
+tokio-postgres = "0.7.17"
 uuid = { version = "1.21.0", features = ["serde", "v7"] }

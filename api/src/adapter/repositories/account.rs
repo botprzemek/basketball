@@ -234,13 +234,8 @@ impl AccountRepository {
 
 #[async_trait]
 impl AccountPort for AccountRepository {
-    async fn select_all(&self, page_size: Option<usize>) -> anyhow::Result<Vec<Account>> {
-        let mut statement = self.select_all.clone();    
+    async fn select_all(&self) -> anyhow::Result<Vec<Account>> {
         let values = ();
-
-        if let Some(page_size) = page_size {
-            statement.set_page_size(page_size as i32);
-        };
 
         let result = self
             .session

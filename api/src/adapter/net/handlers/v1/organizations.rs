@@ -23,10 +23,10 @@ fn internal_error<E: Display>(error: E) -> (StatusCode, String) {
     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
 }
 
-pub struct AccountHandler;
+pub struct OrganizationsHandler;
 
 #[derive(serde::Serialize)]
-pub struct AccountResponse {
+pub struct OrganizationResponse {
     pub id: Uuid,
     pub first_name: String,
     pub last_name: String,
@@ -36,20 +36,20 @@ pub struct AccountResponse {
 }
 
 #[derive(Deserialize)]
-pub struct CreateAccountPayload {
+pub struct CreateOrganizationPayload {
     pub password: String,
     pub first_name: String,
     pub last_name: String,
 }
 
 #[derive(Deserialize)]
-pub struct UpdateAccountPayload {
+pub struct UpdateOrganizationPayload {
     pub password: Option<String>,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
 }
 
-impl From<Account> for AccountResponse {
+impl From<Account> for OrganizationResponse {
     fn from(account: Account) -> Self {
         Self {
             id: account.id,
@@ -62,7 +62,7 @@ impl From<Account> for AccountResponse {
     }
 }
 
-impl AccountHandler {
+impl OrganizationsHandler {
     async fn get(
         State(services): State<Arc<Services>>,
         Query(_pagination): Query<Pagination>
@@ -74,8 +74,8 @@ impl AccountHandler {
 
         let result = accounts
             .into_iter()
-            .map(AccountResponse::from)
-            .collect::<Vec<AccountResponse>>();
+            .map(OrganizationResponse::from)
+            .collect::<Vec<OrganizationResponse>>();
 
         (StatusCode::OK, Json(result)).into_response()
     }
@@ -89,7 +89,7 @@ impl AccountHandler {
             Err(error) => return internal_error(error).into_response(),
         };
 
-        let result = account.map(AccountResponse::from);
+        let result = account.map(OrganizationResponse::from);
 
         match result {
             Some(result) => (StatusCode::OK, Json(result)).into_response(),
@@ -99,7 +99,7 @@ impl AccountHandler {
 
     async fn post(
         State(services): State<Arc<Services>>,
-        Json(payload): Json<CreateAccountPayload>,
+        Json(payload): Json<CreateOrganizationPayload>,
     ) -> impl IntoResponse {
         let account = match services
             .account()
@@ -110,7 +110,7 @@ impl AccountHandler {
             Err(error) => return internal_error(error).into_response(),
         };
 
-        let result = AccountResponse::from(account);
+        let result = OrganizationResponse::from(account);
 
         (StatusCode::OK, Json(result)).into_response()
     }
@@ -118,7 +118,7 @@ impl AccountHandler {
     async fn patch_by_id(
         State(services): State<Arc<Services>>,
         Path(Params { id }): Path<Params>,
-        Json(payload): Json<UpdateAccountPayload>,
+        Json(payload): Json<UpdateOrganizationPayload>,
     ) -> impl IntoResponse {
         let account = match services
             .account()
@@ -129,7 +129,7 @@ impl AccountHandler {
             Err(error) => return internal_error(error).into_response(),
         };
 
-        let result = account.map(AccountResponse::from);
+        let result = account.map(OrganizationResponse::from);
 
         match result {
             Some(result) => (StatusCode::OK, Json(result)).into_response(),
@@ -153,11 +153,11 @@ impl AccountHandler {
 
     pub fn v1(services: Arc<Services>) -> Router {
         Router::new()
-            .route("/", get(AccountHandler::get))
-            .route("/", post(AccountHandler::post))
-            .route("/{id}", get(AccountHandler::get_by_id))
-            .route("/{id}", patch(AccountHandler::patch_by_id))
-            .route("/{id}", delete(AccountHandler::delete_by_id))
+            .route("/", get(OrganizationsHandler::get))
+            .route("/", post(OrganizationsHandler::post))
+            .route("/{id}", get(OrganizationsHandler::get_by_id))
+            .route("/{id}", patch(OrganizationsHandler::patch_by_id))
+            .route("/{id}", delete(OrganizationsHandler::delete_by_id))
             .with_state(services)
     }
 }
