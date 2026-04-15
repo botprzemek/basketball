@@ -1,9 +1,9 @@
 mod account;
-mod password;
-mod organization;
 mod identity;
+mod member;
+mod organization;
 
 pub use account::AccountPort;
-pub use password::PasswordPort;
-pub use organization::OrganizationPort;
 pub use identity::IdentityPort;
+pub use member::MemberPort;
+pub use organization::OrganizationPort;

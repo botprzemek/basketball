@@ -4,7 +4,6 @@
   "dockerComposeFile": ["../docker-compose.yml", "docker-compose.devcontainer.yml"],
   "service": "devcontainer",
   "runServices": [
-    "database",
     "database-1",
     "database-2",
     "database-3",
@@ -28,7 +27,6 @@
       "onAutoForward": "silent"
     }
   },
-  "remotePorts": [{ "containerPort": 3000, "localPort": 3000 }],
   "remoteUser": "vscode",
   "mounts": ["source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"],
   "customizations": {

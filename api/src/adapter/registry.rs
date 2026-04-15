@@ -1,21 +1,35 @@
-use crate::adapter::config::{CacheConfig, DatabaseConfig};
-use crate::adapter::net::ResponseCache;
-use crate::adapter::providers::{RedisProvider, ScyllaProvider};
-use crate::adapter::repositories::AccountRepository;
+use crate::adapter::{
+    config::DatabaseConfig,
+    providers::PostgresProvider,
+    repositories::{
+        AccountRepository, IdentityRepository, MemberRepository, OrganizationRepository,
+    },
+};
 
 pub struct Registry {
-    pub cache: ResponseCache,
-    pub account: AccountRepository,
+    pub account_repository: AccountRepository,
+    pub organization_repository: OrganizationRepository,
+    pub identity_repository: IdentityRepository,
+    pub member_repository: MemberRepository,
 }
 
 impl Registry {
-    pub async fn new(config: &(impl CacheConfig + DatabaseConfig)) -> anyhow::Result<Self> {
-        let (redis, scylla) =
-            tokio::try_join!(RedisProvider::new(config), ScyllaProvider::new(config))?;
+    pub async fn new(config: &impl DatabaseConfig) -> anyhow::Result<Self> {
+        let postgres = PostgresProvider::new(config).await?;
 
-        let account = AccountRepository::new(scylla.get()).await?;
-        let cache = ResponseCache::new(redis.get(), config.get_cache_ttl());
+        let (account_repository, organization_repository, identity_repository, member_repository) =
+            tokio::try_join!(
+                AccountRepository::new(postgres.get()),
+                OrganizationRepository::new(postgres.get()),
+                IdentityRepository::new(postgres.get()),
+                MemberRepository::new(postgres.get())
+            )?;
 
-        Ok(Self { account, cache })
+        Ok(Self {
+            account_repository,
+            organization_repository,
+            identity_repository,
+            member_repository,
+        })
     }
 }

@@ -1,182 +1,118 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
-use futures::TryStreamExt;
-use scylla::{
-    DeserializeRow, SerializeRow,
-    client::session::Session,
-    statement::prepared::PreparedStatement,
-    value::CqlTimestamp,
-};
+use tokio_postgres::{Client, Row, Statement, types::Type};
 use uuid::Uuid;
 
-use crate::domain::entities::Account;
-use crate::domain::ports::AccountPort;
+use crate::domain::{entities::Account, ports::AccountPort};
 
 #[derive(Clone)]
 pub struct AccountRepository {
-    session: Arc<Session>,
-    select_all: PreparedStatement,
-    select_by_id: PreparedStatement,
-    insert: PreparedStatement,
-    update: PreparedStatement,
-    delete: PreparedStatement,
+    client: Arc<Client>,
+    select: Statement,
+    select_by_self: Statement,
+    select_by_email: Statement,
+    insert: Statement,
+    update: Statement,
+    delete: Statement,
 }
 
-#[derive(SerializeRow, DeserializeRow)]
-pub struct AccountRow {
-    pub id: Uuid,
-    pub password_hash: String,
-    pub first_name: String,
-    pub last_name: String,
-    pub is_active: bool,
-    pub created_at: CqlTimestamp,
-    pub updated_at: Option<CqlTimestamp>,
-}
-
-impl From<AccountRow> for Account {
-    fn from(row: AccountRow) -> Self {
-        fn convert_timestamp(ms: i64) -> DateTime<Utc> {
-            DateTime::from_timestamp_millis(ms)
-                .unwrap_or(Utc::now())
-                .with_timezone(&Utc)
-        }
-
+impl From<&Row> for Account {
+    fn from(row: &Row) -> Self {
         Self {
-            id: row.id,
-            password_hash: row.password_hash,
-            first_name: row.first_name,
-            last_name: row.last_name,
-            is_active: row.is_active,
-            created_at: convert_timestamp(row.created_at.0),
-            updated_at: row.updated_at.map(|d| convert_timestamp(d.0)),
-        }
-    }
-}
-
-impl From<Account> for AccountRow {
-    fn from(account: Account) -> Self {
-        Self {
-            id: account.id,
-            password_hash: account.password_hash,
-            first_name: account.first_name,
-            last_name: account.last_name,
-            is_active: account.is_active,
-            created_at: CqlTimestamp(account.created_at.timestamp_millis()),
-            updated_at: account
-                .updated_at
-                .map(|d| CqlTimestamp(d.timestamp_millis())),
+            id: row.get("id"),
+            email: row.get("email"),
+            password_hash: row.get("password_hash"),
+            first_name: row.get("first_name"),
+            last_name: row.get("last_name"),
+            is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         }
     }
 }
 
 impl AccountRepository {
-    pub async fn new(session: Arc<Session>) -> anyhow::Result<Self> {
-        session
-            .query_unpaged(
+    pub async fn new(client: Arc<Client>) -> anyhow::Result<Self> {
+        client.batch_execute("
+            CREATE TABLE IF NOT EXISTS basketball.accounts (
+                id UUID PRIMARY KEY,
+                email STRING UNIQUE NOT NULL,
+                password_hash STRING NOT NULL,
+                first_name STRING NOT NULL,
+                last_name STRING NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_accounts_email ON basketball.accounts(email);
+            CREATE INDEX IF NOT EXISTS idx_accounts_created_at ON basketball.accounts(created_at DESC);
+        ")
+            .await?;
+
+        let select = client
+            .prepare_typed(
                 "
-                CREATE KEYSPACE IF NOT EXISTS api
-                WITH replication = {
-                    'class': 'NetworkTopologyStrategy',
-                    'replication_factor': 1
-                }",
-                (),
-            )
-            .await?;
-
-        session
-            .query_unpaged("DROP TABLE IF EXISTS api.accounts", ())
-            .await?;
-
-        session
-            .query_unpaged(
-                "CREATE TABLE IF NOT EXISTS api.accounts (
-                id uuid PRIMARY KEY,
-                password_hash text,
-                first_name text,
-                last_name text,
-                is_active boolean,
-                created_at timestamp,
-                updated_at timestamp
-            )",
-                (),
-            )
-            .await?;
-
-        let first_names = [
-            "Jan", "Anna", "Piotr", "Maria", "Marek", "Ewa", "Adam", "Olga", "Jacek", "Iga",
-            "Kamil", "Marta", "Leon", "Sara", "Hugo", "Nina",
-        ];
-        let last_names = [
-            "Nowak",
-            "Kowalski",
-            "Wiśniewski",
-            "Wójcik",
-            "Kowalczyk",
-            "Kamiński",
-            "Zieliński",
-            "Szymański",
-            "Woźniak",
-            "Dąbrowski",
-            "Kozłowski",
-            "Mazur",
-            "Kwiatkowski",
-            "Krawczyk",
-            "Kaczmarek",
-            "Zając",
-        ];
-
-        let insert_stmt = session.prepare(
-            "INSERT INTO api.accounts (id, password_hash, first_name, last_name, is_active, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, ?, toTimestamp(now()), NULL)"
-        ).await?;
-
-        for i in 0..16 {
-            let id = uuid::Uuid::new_v4();
-            let first_name = first_names[i];
-            let last_name = last_names[i % last_names.len()];
-            let hash = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$Wv6...";
-
-            session
-                .execute_unpaged(&insert_stmt, (id, hash, first_name, last_name, true))
-                .await?;
-        }
-
-        let select_all = session
-            .prepare(
-                "SELECT
+                SELECT
                     id,
+                    email,
                     password_hash,
                     first_name,
                     last_name,
                     is_active,
                     created_at,
                     updated_at
-                FROM api.accounts",
+                FROM basketball.accounts
+            ",
+                &[],
             )
             .await?;
 
-        let select_by_id = session
-            .prepare(
-                "SELECT
+        let select_by_self = client
+            .prepare_typed(
+                "
+                SELECT
                     id,
+                    email,
                     password_hash,
                     first_name,
                     last_name,
                     is_active,
                     created_at,
                     updated_at
-                FROM api.accounts
-                WHERE id = :id",
+                FROM basketball.accounts
+                WHERE id = $1
+            ",
+                &[Type::UUID],
             )
             .await?;
 
-        let insert = session
-            .prepare(
-                "INSERT
-                INTO api.accounts (
+        let select_by_email = client
+            .prepare_typed(
+                "
+                SELECT
                     id,
+                    email,
+                    password_hash,
+                    first_name,
+                    last_name,
+                    is_active,
+                    created_at,
+                    updated_at
+                FROM basketball.accounts
+                WHERE email = $1
+            ",
+                &[Type::TEXT],
+            )
+            .await?;
+
+        let insert = client
+            .prepare_typed(
+                "
+                INSERT INTO basketball.accounts (
+                    id,
+                    email,
                     password_hash,
                     first_name,
                     last_name,
@@ -185,46 +121,76 @@ impl AccountRepository {
                     updated_at
                 )
                 VALUES (
-                    :id,
-                    :password_hash,
-                    :first_name,
-                    :last_name,
-                    :is_active,
-                    :created_at,
-                    :updated_at
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    $7,
+                    $8
                 )
-                IF NOT EXISTS",
+            ",
+                &[
+                    Type::UUID,
+                    Type::TEXT,
+                    Type::TEXT,
+                    Type::TEXT,
+                    Type::TEXT,
+                    Type::BOOL,
+                    Type::TIMESTAMPTZ,
+                    Type::TIMESTAMPTZ,
+                ],
             )
             .await?;
 
-        let update = session
-            .prepare(
-                "UPDATE api.accounts 
-                SET
-                    password_hash = :password_hash,
-                    first_name = :first_name, 
-                    last_name = :last_name,
-                    is_active = :is_active,
-                    created_at = :created_at,
-                    updated_at = :updated_at
-                WHERE id = :id
-                IF EXISTS",
+        let update = client
+            .prepare_typed(
+                "
+                UPDATE basketball.accounts
+                SET (
+                    email,
+                    password_hash,
+                    first_name,
+                    last_name,
+                    is_active,
+                    updated_at
+                ) = (
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6
+                )
+            ",
+                &[
+                    Type::TEXT,
+                    Type::TEXT,
+                    Type::TEXT,
+                    Type::TEXT,
+                    Type::BOOL,
+                    Type::TIMESTAMPTZ,
+                ],
             )
             .await?;
 
-        let delete = session
-            .prepare(
-                "DELETE
-                FROM api.accounts
-                WHERE id = ?
-                IF EXISTS",
+        let delete = client
+            .prepare_typed(
+                "
+                DELETE
+                FROM basketball.accounts
+                WHERE id = $1
+            ",
+                &[Type::UUID],
             )
             .await?;
 
         Ok(Self {
-            session,
-            select_all,
-            select_by_id,
+            client,
+            select,
+            select_by_self,
+            select_by_email,
             insert,
             update,
             delete,
@@ -234,55 +200,80 @@ impl AccountRepository {
 
 #[async_trait]
 impl AccountPort for AccountRepository {
-    async fn select_all(&self) -> anyhow::Result<Vec<Account>> {
-        let values = ();
-
+    async fn select(&self) -> anyhow::Result<Vec<Account>> {
         let result = self
-            .session
-            .execute_iter(self.select_all.clone(), &values)
+            .client
+            .query(&self.select.clone(), &[])
             .await?
-            .rows_stream::<AccountRow>()?
-            .map_ok(Account::from)
-            .try_collect::<Vec<Account>>()
-            .await?;
+            .iter()
+            .map(Account::from)
+            .collect::<Vec<Account>>();
 
         Ok(result)
     }
 
-    async fn select_by_id(&self, id: Uuid) -> anyhow::Result<Option<Account>> {
-        let values = (id,);
-
+    async fn select_by_self(&self, id: Uuid) -> anyhow::Result<Option<Account>> {
         let result = self
-            .session
-            .execute_unpaged(&self.select_by_id, &values)
+            .client
+            .query(&self.select_by_self.clone(), &[&id])
             .await?
-            .into_rows_result()?
-            .maybe_first_row::<AccountRow>()?
+            .first()
+            .map(Account::from);
+
+        Ok(result)
+    }
+
+    async fn select_by_email(&self, email: String) -> anyhow::Result<Option<Account>> {
+        let result = self
+            .client
+            .query(&self.select_by_email.clone(), &[&email])
+            .await?
+            .first()
             .map(Account::from);
 
         Ok(result)
     }
 
     async fn insert(&self, account: Account) -> anyhow::Result<Account> {
-        let values = AccountRow::from(account);
+        self.client
+            .execute(
+                &self.insert.clone(),
+                &[
+                    &account.id,
+                    &account.email,
+                    &account.password_hash,
+                    &account.first_name,
+                    &account.last_name,
+                    &account.is_active,
+                    &account.created_at,
+                    &account.updated_at,
+                ],
+            )
+            .await?;
 
-        self.session.execute_unpaged(&self.insert, &values).await?;
-
-        Ok(Account::from(values))
+        Ok(account)
     }
 
     async fn update(&self, account: Account) -> anyhow::Result<Account> {
-        let values = AccountRow::from(account);
+        self.client
+            .execute(
+                &self.update.clone(),
+                &[
+                    &account.email,
+                    &account.password_hash,
+                    &account.first_name,
+                    &account.last_name,
+                    &account.is_active,
+                    &account.updated_at,
+                ],
+            )
+            .await?;
 
-        self.session.execute_unpaged(&self.update, &values).await?;
-
-        Ok(Account::from(values))
+        Ok(account)
     }
 
     async fn delete(&self, id: Uuid) -> anyhow::Result<()> {
-        let values = (id,);
-
-        self.session.execute_unpaged(&self.delete, &values).await?;
+        self.client.execute(&self.delete.clone(), &[&id]).await?;
 
         Ok(())
     }

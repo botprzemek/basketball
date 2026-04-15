@@ -1,32 +1,46 @@
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{delete, get, patch, post},
+    routing::get,
 };
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
-use std::fmt::Display;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::adapter::{
     Services,
-    net::handlers::{Pagination, Params},
+    net::handlers::{Params, internal_error},
 };
 use crate::domain::{
+    applications::{CreateAccount, UpdateAccount},
     entities::Account,
 };
 
-fn internal_error<E: Display>(error: E) -> (StatusCode, String) {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+pub struct AccountsHandler;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateAccountRequest {
+    pub email: String,
+    pub password: String,
+    pub first_name: String,
+    pub last_name: String,
 }
 
-pub struct OrganizationsHandler;
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateAccountRequest {
+    pub email: Option<String>,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+}
 
-#[derive(serde::Serialize)]
-pub struct OrganizationResponse {
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountResponse {
     pub id: Uuid,
     pub first_name: String,
     pub last_name: String,
@@ -35,21 +49,7 @@ pub struct OrganizationResponse {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Deserialize)]
-pub struct CreateOrganizationPayload {
-    pub password: String,
-    pub first_name: String,
-    pub last_name: String,
-}
-
-#[derive(Deserialize)]
-pub struct UpdateOrganizationPayload {
-    pub password: Option<String>,
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
-}
-
-impl From<Account> for OrganizationResponse {
+impl From<Account> for AccountResponse {
     fn from(account: Account) -> Self {
         Self {
             id: account.id,
@@ -62,11 +62,8 @@ impl From<Account> for OrganizationResponse {
     }
 }
 
-impl OrganizationsHandler {
-    async fn get(
-        State(services): State<Arc<Services>>,
-        Query(_pagination): Query<Pagination>
-    ) -> impl IntoResponse {
+impl AccountsHandler {
+    async fn get(State(services): State<Arc<Services>>) -> impl IntoResponse {
         let accounts = match services.account().find_all().await {
             Ok(accounts) => accounts,
             Err(error) => return internal_error(error).into_response(),
@@ -74,8 +71,8 @@ impl OrganizationsHandler {
 
         let result = accounts
             .into_iter()
-            .map(OrganizationResponse::from)
-            .collect::<Vec<OrganizationResponse>>();
+            .map(AccountResponse::from)
+            .collect::<Vec<AccountResponse>>();
 
         (StatusCode::OK, Json(result)).into_response()
     }
@@ -89,7 +86,7 @@ impl OrganizationsHandler {
             Err(error) => return internal_error(error).into_response(),
         };
 
-        let result = account.map(OrganizationResponse::from);
+        let result = account.map(AccountResponse::from);
 
         match result {
             Some(result) => (StatusCode::OK, Json(result)).into_response(),
@@ -99,18 +96,28 @@ impl OrganizationsHandler {
 
     async fn post(
         State(services): State<Arc<Services>>,
-        Json(payload): Json<CreateOrganizationPayload>,
+        Json(payload): Json<CreateAccountRequest>,
     ) -> impl IntoResponse {
+        let password_hash = match services.actor().generate_hash(payload.password).await {
+            Ok(password_hash) => password_hash,
+            Err(error) => return internal_error(error).into_response(),
+        };
+
         let account = match services
             .account()
-            .create(payload.password, payload.first_name, payload.last_name)
+            .create(CreateAccount {
+                email: payload.email,
+                password_hash,
+                first_name: payload.first_name,
+                last_name: payload.last_name,
+            })
             .await
         {
             Ok(account) => account,
             Err(error) => return internal_error(error).into_response(),
         };
 
-        let result = OrganizationResponse::from(account);
+        let result = AccountResponse::from(account);
 
         (StatusCode::OK, Json(result)).into_response()
     }
@@ -118,18 +125,25 @@ impl OrganizationsHandler {
     async fn patch_by_id(
         State(services): State<Arc<Services>>,
         Path(Params { id }): Path<Params>,
-        Json(payload): Json<UpdateOrganizationPayload>,
+        Json(payload): Json<UpdateAccountRequest>,
     ) -> impl IntoResponse {
         let account = match services
             .account()
-            .update(id, payload.password, payload.first_name, payload.last_name)
+            .update(
+                id,
+                UpdateAccount {
+                    email: payload.email,
+                    first_name: payload.first_name,
+                    last_name: payload.last_name,
+                },
+            )
             .await
         {
             Ok(account) => account,
             Err(error) => return internal_error(error).into_response(),
         };
 
-        let result = account.map(OrganizationResponse::from);
+        let result = account.map(AccountResponse::from);
 
         match result {
             Some(result) => (StatusCode::OK, Json(result)).into_response(),
@@ -153,11 +167,13 @@ impl OrganizationsHandler {
 
     pub fn v1(services: Arc<Services>) -> Router {
         Router::new()
-            .route("/", get(OrganizationsHandler::get))
-            .route("/", post(OrganizationsHandler::post))
-            .route("/{id}", get(OrganizationsHandler::get_by_id))
-            .route("/{id}", patch(OrganizationsHandler::patch_by_id))
-            .route("/{id}", delete(OrganizationsHandler::delete_by_id))
+            .route("/", get(Self::get).post(Self::post))
+            .route(
+                "/{id}",
+                get(Self::get_by_id)
+                    .patch(Self::patch_by_id)
+                    .delete(Self::delete_by_id),
+            )
             .with_state(services)
     }
 }

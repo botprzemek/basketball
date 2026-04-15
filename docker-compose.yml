@@ -2,12 +2,8 @@ networks:
   basketball:
     name: basketball
     driver: bridge
-  database:
-    name: basketball-database
 
 volumes:
-  database:
-    name: basketball-database
   database-1:
     name: basketball-database-1
   database-2:
@@ -23,57 +19,44 @@ x-db-common: &db-common
   image: "cockroachdb/cockroach:latest-v23.2"
   restart: always
   networks:
-    - database
-  command: start --insecure --join=database-1,database-2,database-3
+    basketball:
 
 services:
-  database:
-    image: scylladb/scylla:2026.1
-    container_name: basketball-database
-    command: ["--overprovisioned", "1", "--smp", "1", "--memory", "750M", "--developer-mode", "1"]
-    environment:
-      SCYLLA_ENABLE_AUTH: "false"
-    networks:
-      basketball:
-    healthcheck:
-      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - database:/var/lib/scylla
-    user: 0:0
-
   database-1:
     <<: *db-common
     container_name: basketball-database-1
+    command: start --insecure --advertise-addr=basketball-database-1 --sql-addr=:26357 --join=basketball-database-1,basketball-database-2,basketball-database-3
     volumes:
       - database-1:/cockroach/cockroach-data
-    command: start --insecure --join=database-1,database-2,database-3
 
   database-2:
     <<: *db-common
     container_name: basketball-database-2
+    command: start --insecure --advertise-addr=basketball-database-2 --sql-addr=:26357 --join=basketball-database-1,basketball-database-2,basketball-database-3
     volumes:
       - database-2:/cockroach/cockroach-data
     depends_on:
-      - database-1
+      database-1:
+        condition: service_started
 
   database-3:
     <<: *db-common
     container_name: basketball-database-3
+    command: start --insecure --advertise-addr=basketball-database-3 --sql-addr=:26357 --join=basketball-database-1,basketball-database-2,basketball-database-3
     volumes:
       - database-3:/cockroach/cockroach-data
     depends_on:
-      - database-1
+      database-1:
+        condition: service_started
 
   init-database:
     image: "cockroachdb/cockroach:latest-v23.2"
+    command: init --insecure --host=basketball-database-1
     networks:
-      - database
-    command: init --insecure --host=database-1
+      basketball:
     depends_on:
-      - database-1
+      database-1:
+        condition: service_started
 
   cache:
     image: valkey/valkey:9.0-alpine
@@ -94,14 +77,11 @@ services:
     image: basketball/api:0.1.0
     build: ./api
     container_name: basketball-api
-    environment:
-      SCYLLA_URL: "database:9042"
-      VALKEY_URL: "cache:6379"
     networks:
       basketball:
     depends_on:
-      database:
-        condition: service_healthy
+      init-database:
+        condition: service_completed_successfully
       cache:
         condition: service_started
 
@@ -111,7 +91,7 @@ services:
     container_name: basketball-app
     environment:
       NUXT_APP_BASE_URL: "/app/"
-      NUXT_API_URL: "http://api:3000"
+      NUXT_API_URL: "http://basketball-api:3000"
     networks:
       basketball:
     depends_on:

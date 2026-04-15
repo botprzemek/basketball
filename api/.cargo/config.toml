@@ -5,8 +5,9 @@ incremental = true
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = "3001"
 
-DATABASE_HOST = "basketball-database"
-DATABASE_PORT = "9042"
+DATABASE_HOST = "basketball-database-1"
+DATABASE_PORT = "26357"
+DATABASE_NAME = "defaultdb"
 
 CACHE_HOST = "basketball-cache"
 CACHE_PORT = "6379"

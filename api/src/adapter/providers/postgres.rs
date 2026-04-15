@@ -1,29 +1,38 @@
+use std::sync::Arc;
+use tokio_postgres::{Client, NoTls, connect};
+
 use crate::adapter::config::DatabaseConfig;
 
-use std::sync::Arc;
-
-use scylla::client::session::Session;
-use scylla::client::session_builder::SessionBuilder;
-
 pub struct PostgresProvider {
-    client: Arc<Session>,
+    client: Arc<Client>,
 }
 
 impl PostgresProvider {
     pub async fn new(config: &impl DatabaseConfig) -> anyhow::Result<Self> {
-        let database_url = config.get_database_url();
+        let url = config.get_database_url();
+        let (client, connection) = connect(&url, NoTls).await?;
 
-        let session_builder = SessionBuilder::new()
-            .known_node(database_url)
-            .build()
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                eprintln!("Connection error: {}", e);
+            }
+        });
+
+        client
+            .batch_execute(
+                "
+            DROP SCHEMA IF EXISTS basketball CASCADE;
+            CREATE SCHEMA IF NOT EXISTS basketball;
+        ",
+            )
             .await?;
 
-        let client = Arc::new(session_builder);
-
-        Ok(Self { client })
+        Ok(Self {
+            client: Arc::new(client),
+        })
     }
 
-    pub fn get(&self) -> Arc<Session> {
+    pub fn get(&self) -> Arc<Client> {
         self.client.clone()
     }
 }

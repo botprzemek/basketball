@@ -1,9 +1,6 @@
-mod accounts;
-mod auth;
-mod organizations;
-mod identities;
+mod authentication;
+mod organization;
+pub mod system;
 
-pub use accounts::AccountHandler;
-pub use auth::AuthHandler;
-pub use identities::IdentitiesHandler;
-pub use organizations::OrganizationsHandler;
+pub use authentication::AuthenticationHandler;
+pub use organization::OrganizationHandler;

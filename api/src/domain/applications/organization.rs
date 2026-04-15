@@ -1,13 +1,23 @@
 use chrono::Utc;
+use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::domain::{
-    entities::Organization,
-    ports::OrganizationPort,
-};
+use crate::domain::{entities::Organization, ports::OrganizationPort};
 
 pub struct OrganizationApplication<O: OrganizationPort> {
     organization_service: O,
+}
+
+#[derive(Deserialize)]
+pub struct CreateOrganization {
+    pub name: String,
+    pub slug: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateOrganization {
+    pub name: Option<String>,
+    pub slug: Option<String>,
 }
 
 impl<O: OrganizationPort> OrganizationApplication<O> {
@@ -18,19 +28,15 @@ impl<O: OrganizationPort> OrganizationApplication<O> {
     }
 
     pub async fn find_all(&self) -> anyhow::Result<Vec<Organization>> {
-        self.organization_service.select_all().await
+        self.organization_service.select().await
     }
 
     pub async fn find_by_id(&self, id: Uuid) -> anyhow::Result<Option<Organization>> {
-        self.organization_service.select_by_id(id).await
+        self.organization_service.select_by_self(id).await
     }
 
-    pub async fn create(
-        &self,
-        name: String,
-        slug: String,
-    ) -> anyhow::Result<Organization> {
-        let organization = Organization::new(name, slug);
+    pub async fn create(&self, command: CreateOrganization) -> anyhow::Result<Organization> {
+        let organization = Organization::new(command.name, command.slug);
 
         self.organization_service.insert(organization).await
     }
@@ -38,22 +44,21 @@ impl<O: OrganizationPort> OrganizationApplication<O> {
     pub async fn update(
         &self,
         id: Uuid,
-        name: Option<String>,
-        slug: Option<String>,
+        command: UpdateOrganization,
     ) -> anyhow::Result<Option<Organization>> {
-        let mut organization = match self.organization_service.select_by_id(id).await? {
+        let mut organization = match self.organization_service.select_by_self(id).await? {
             Some(organization) => organization,
             None => return Ok(None),
         };
 
         let mut has_changed = false;
 
-        if let Some(name) = name {
+        if let Some(name) = command.name {
             organization.name = name;
             has_changed = true;
         }
 
-        if let Some(slug) = slug {
+        if let Some(slug) = command.slug {
             organization.slug = slug;
             has_changed = true;
         }

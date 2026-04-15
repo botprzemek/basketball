@@ -3,8 +3,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Account {
     pub id: Uuid,
+    pub email: String,
     pub password_hash: String,
     pub first_name: String,
     pub last_name: String,
@@ -14,9 +16,15 @@ pub struct Account {
 }
 
 impl Account {
-    pub fn new(password_hash: String, first_name: String, last_name: String) -> Self {
+    pub fn new(
+        email: String,
+        password_hash: String,
+        first_name: String,
+        last_name: String,
+    ) -> Self {
         Self {
             id: Uuid::now_v7(),
+            email,
             password_hash,
             first_name,
             last_name,

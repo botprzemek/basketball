@@ -1,13 +1,14 @@
 use axum::Router;
-use axum::middleware::from_fn_with_state;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
 use crate::adapter::{
     Services,
     config::ServerConfig,
-    net::handlers::{AuthHandler,AccountHandler, OrganizationsHandler, IdentitiesHandler},
-    net::middleware::cache_layer,
+    net::handlers::{
+        AuthenticationHandler, OrganizationHandler,
+        system::{AccountsHandler, IdentitiesHandler, OrganizationsHandler},
+    },
 };
 
 pub struct Gateway {
@@ -28,22 +29,34 @@ impl Gateway {
         })
     }
 
-    pub fn with_v1(mut self) -> Self {
-        let routes_v1 = Router::new()
-            .nest("/auth", AuthHandler::v1(self.services.clone()))
-            .nest("/accounts", AccountHandler::v1(self.services.clone()))
-            .nest("/organizations", OrganizationsHandler::v1(self.services.clone()))
-            .nest("/identities", IdentitiesHandler::v1(self.services.clone()));
-
-        self.router = self.router.nest("/api/v1", routes_v1);
+    pub fn with_auth(mut self) -> Self {
+        self.router = self.router.nest(
+            "/api/v1/auth",
+            AuthenticationHandler::v1(self.services.clone()),
+        );
 
         self
     }
 
-    pub fn with_cache(mut self) -> Self {
-        let layer = from_fn_with_state(self.services.clone(), cache_layer);
+    pub fn with_scope(mut self) -> Self {
+        self.router = self.router.nest(
+            "/api/v1/organization",
+            OrganizationHandler::v1(self.services.clone()),
+        );
 
-        self.router = self.router.layer(layer);
+        self
+    }
+
+    pub fn with_v1(mut self) -> Self {
+        let routes_v1 = Router::new()
+            .nest("/accounts", AccountsHandler::v1(self.services.clone()))
+            .nest(
+                "/organizations",
+                OrganizationsHandler::v1(self.services.clone()),
+            )
+            .nest("/identities", IdentitiesHandler::v1(self.services.clone()));
+
+        self.router = self.router.nest("/api/v1/system", routes_v1);
 
         self
     }
