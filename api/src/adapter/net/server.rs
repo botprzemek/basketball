@@ -38,6 +38,60 @@ impl Gateway {
         self
     }
 
+    pub fn with_accounts(mut self) -> Self {
+        self.router = self.router.nest(
+            "/api/v1/accounts",
+            AccountHandler::v1(self.services.clone()),
+        );
+        self
+    }
+
+    pub fn with_organizations(mut self) -> Self {
+        self.router = self.router.nest(
+            "/api/v1/organizations",
+            OrganizationHandler::v1(self.services.clone()),
+        );
+
+        let prefix = "/api/v1/organizations/{organization_id}";
+
+        self.router = self
+            .router
+            .nest(
+                &format!("{}/members", prefix),
+                MemberHandler::v1(self.services.clone()),
+            )
+            .nest(
+                &format!("{}/groups", prefix),
+                GroupHandler::v1(self.services.clone()),
+            )
+            .nest(
+                &format!("{}/roles", prefix),
+                RoleHandler::v1(self.services.clone()),
+            )
+            .nest(
+                &format!("{}/permissions", prefix),
+                PermissionHandler::v1(self.services.clone()),
+            )
+            .nest(
+                &format!("{}/logs", prefix),
+                AuditLogHandler::v1(self.services.clone()),
+            )
+            .nest(
+                &format!("{}/teams", prefix),
+                TeamHandler::v1(self.services.clone()),
+            )
+            .nest(
+                &format!("{}/players", prefix),
+                PlayerHandler::v1(self.services.clone()),
+            )
+            .nest(
+                &format!("{}/matches", prefix),
+                MatchHandler::v1(self.services.clone()),
+            );
+
+        self
+    }
+
     pub fn with_scope(mut self) -> Self {
         self.router = self.router.nest(
             "/api/v1/organization",

@@ -8,9 +8,7 @@ export default defineNuxtConfig({
     port: 3002,
   },
 
-  app: {
-    baseURL: "/app/",
-  },
+  modules: ["@nuxt/fonts"],
 
   nitro: {
     runtimeConfig: {
@@ -18,7 +16,18 @@ export default defineNuxtConfig({
     },
   },
 
-  modules: ["@nuxt/fonts", "@nuxt/hints", "@nuxt/icon", "@nuxt/image", "@nuxt/test-utils"],
+  app: {
+    baseURL: "/app/",
+  },
+
+  runtimeConfig: {
+    apiHost: "http://localhost:3000/api/v1",
+    tokens: {
+      identity: "identity-token",
+      access: "access-token",
+      refresh: "refresh-token",
+    },
+  },
 
   vite: {
     plugins: [tailwindcss()],
@@ -29,5 +38,6 @@ export default defineNuxtConfig({
       include: ["@vue/devtools-core", "@vue/devtools-kit"],
     },
   },
+
   css: ["./app/assets/css/main.css"],
 });

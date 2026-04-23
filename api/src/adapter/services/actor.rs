@@ -15,6 +15,8 @@ pub struct ActorService {
     token: TokenService,
 }
 
+const DUMMY_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$jtZakqCGyhTTEEPAvX5wFA$Vg9HqwADg/5cxFyOLH7PtPoArGPTolQ/+ZvPzlC9Td0";
+
 impl ActorService {
     pub fn new(
         password: PasswordService,
@@ -62,16 +64,17 @@ impl ActorService {
         email: String,
         password: String,
     ) -> anyhow::Result<AuthenticationState> {
-        let account = match self.account.find_by_email(email).await? {
-            Some(account) => account,
-            None => return Err(anyhow::anyhow!("Invalid credentials")),
+        let account = self.account.find_by_email(email).await?;
+        let hash_to_verify = match &account {
+            Some(acc) => acc.password_hash.clone(),
+            None => DUMMY_HASH.to_string(),
         };
+        let is_password_ok = self.password.verify(password, hash_to_verify).await.is_ok();
 
-        self.password
-            .verify(password, account.password_hash.clone())
-            .await?;
-
-        self.token.issue_identity_selection(account.id)
+        match (account, is_password_ok) {
+            (Some(account), true) => self.token.issue_identity_selection(account.id),
+            _ => Err(anyhow::anyhow!("Invalid authentication credentials")),
+        }
     }
 
     pub async fn identities(&self, token: &str) -> anyhow::Result<Vec<AccountIdentity>> {

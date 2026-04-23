@@ -24,5 +24,6 @@ serde = { version = "1.0.2", features = ["derive"] }
 serde_json = { version = "1.0.149", features = ["std"] }
 time = { version = "0.3.47", features = [] }
 tokio = { version = "1.12.0", features = ["full"] }
-tokio-postgres = { version = "0.7.17", features = ["with-uuid-1", "with-chrono-0_4"] }
+diesel = { version = "2.3.0", features = [] }
+diesel-async = { version = "0.7.0", features = ["postgres"] }
 uuid = { version = "1.21.0", features = ["serde", "v7"] }

@@ -1,0 +1,1074 @@
+openapi: 3.1.0
+info:
+  title: API
+  description: >
+    API for managing basketball statistics, organizations, teams, and user access control.
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+
+components:
+  securitySchemes:
+    AccountAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Authentication token for account-level operations.
+    OrganizationAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Authentication token for organization-specific operations.
+
+  schemas:
+    Registration:
+      type: object
+      description: Data required to register a new user account.
+      properties:
+        email: { type: string, format: email, description: "The user's email address." }
+        password: { type: string, format: password, description: "The user's password." }
+        firstName: { type: string, description: "The user's first name." }
+        lastName: { type: string, description: "The user's last name." }
+
+    Login:
+      type: object
+      description: Credentials required to authenticate an existing user.
+      properties:
+        email: { type: string, format: email, description: "The registered email address." }
+        password: { type: string, format: password, description: "The account password." }
+
+    Context:
+      type: object
+      description: Organization context selection for the current session.
+      properties:
+        organizationId:
+          {
+            type: string,
+            format: uuid,
+            description: "The unique ID of the organization to access.",
+          }
+
+    Organization:
+      type: object
+      description: Summary information about an organization.
+      properties:
+        id: { type: string, format: uuid, description: "Unique identifier for the organization." }
+        name: { type: string, description: "Display name of the organization." }
+        slug: { type: string, description: "URL-friendly identifier." }
+        joinedAt:
+          { type: string, format: date-time, description: "Timestamp when the user joined." }
+
+    OrganizationDetails:
+      type: object
+      description: Full details of an organization.
+      properties:
+        id: { type: string, format: uuid, description: "Unique identifier." }
+        ownerId:
+          { type: string, format: uuid, description: "Identifier of the organization owner." }
+        name: { type: string, description: "Official name." }
+        slug: { type: string, description: "URL slug." }
+        avatarUrl: { type: string, format: uri, description: "URL to the organization's avatar." }
+        createdAt: { type: string, format: date-time, description: "Creation timestamp." }
+        updatedAt: { type: string, format: date-time, description: "Last update timestamp." }
+
+    Member:
+      type: object
+      description: A member within an organization.
+      properties:
+        id: { type: string, format: uuid, description: "Unique membership ID." }
+        accountId:
+          { type: string, format: uuid, description: "The global account ID of the member." }
+        email: { type: string, format: email, description: "Member's email address." }
+        firstName: { type: string, description: "Member's first name." }
+        lastName: { type: string, description: "Member's last name." }
+        roles:
+          type: array
+          description: "List of role IDs assigned to the member."
+          items: { type: string, format: uuid }
+        groups:
+          type: array
+          description: "List of group IDs the member belongs to."
+          items: { type: string, format: uuid }
+        status:
+          {
+            type: string,
+            enum: [active, invited, suspended],
+            description: "Current membership status.",
+          }
+        joinedAt: { type: string, format: date-time, description: "Timestamp of joining." }
+
+    Group:
+      type: object
+      description: A collection of members with shared permissions.
+      properties:
+        id: { type: string, format: uuid, description: "Unique group ID." }
+        parentId: { type: string, format: uuid, description: "ID of the parent group, if any." }
+        name: { type: string, description: "Group name." }
+        description: { type: string, description: "Detailed group description." }
+        members:
+          type: array
+          description: "IDs of members in this group."
+          items: { type: string, format: uuid }
+        isSystem:
+          { type: boolean, description: "Indicates if the group is a protected system group." }
+        permissions:
+          type: array
+          description: "List of permission keys assigned to the group."
+          items: { type: string }
+        createdAt: { type: string, format: date-time, description: "Creation timestamp." }
+        updatedAt: { type: string, format: date-time, description: "Last update timestamp." }
+
+    Role:
+      type: object
+      description: A role defining a set of permissions.
+      properties:
+        id: { type: string, format: uuid, description: "Unique role ID." }
+        name: { type: string, description: "Role name." }
+        isSystem:
+          { type: boolean, description: "Indicates if the role is a protected system role." }
+        permissions:
+          type: array
+          description: "Permission keys associated with this role."
+          items: { type: string }
+        createdAt: { type: string, format: date-time, description: "Creation timestamp." }
+        updatedAt: { type: string, format: date-time, description: "Last update timestamp." }
+
+    Permission:
+      type: object
+      description: An atomic permission used within the system.
+      properties:
+        id: { type: string, format: uuid, description: "Unique permission ID." }
+        category_id: { type: string, format: uuid, description: "ID of the permission category." }
+        key: { type: string, description: "Functional key string." }
+        description: { type: string, description: "What this permission allows." }
+        createdAt: { type: string, format: date-time, description: "Creation timestamp." }
+        updatedAt: { type: string, format: date-time, description: "Last update timestamp." }
+
+    AuditLog:
+      type: object
+      description: A record of a change or action in the system.
+      properties:
+        id: { type: string, format: uuid, description: "Unique log entry ID." }
+        actorId: { type: string, format: uuid, description: "The user who performed the action." }
+        resourceId:
+          { type: string, format: uuid, description: "The resource affected by the action." }
+        action: { type: string, description: "Type of action performed." }
+        resourceType: { type: string, description: "The type of resource affected." }
+        changes:
+          type: object
+          description: "Data representing the differences."
+          additionalProperties: true
+        ipAddress: { type: string, format: ipv4, description: "Origin IP address." }
+        userAgent: { type: string, description: "Origin browser/client string." }
+        createdAt: { type: string, format: date-time, description: "When the action occurred." }
+        updatedAt: { type: string, format: date-time, description: "Log update timestamp." }
+
+    Team:
+      type: object
+      description: Basic information about a basketball team.
+      properties:
+        id: { type: string, format: uuid, description: "Unique team ID." }
+        name: { type: string, description: "Team name." }
+        slug: { type: string, description: "Team URL slug." }
+        imageUrl: { type: string, format: uri, description: "Link to team logo." }
+        players:
+          type: array
+          description: "IDs of players on the team."
+          items: { type: string, format: uuid }
+
+    TeamDetails:
+      type: object
+      description: Comprehensive information about a basketball team, including player objects.
+      properties:
+        id: { type: string, format: uuid, description: "Unique team ID." }
+        name: { type: string, description: "Team name." }
+        slug: { type: string, description: "Team slug." }
+        imageUrl: { type: string, format: uri, description: "Logo URL." }
+        players:
+          type: array
+          description: "List of player objects."
+          items: { $ref: "#/components/schemas/Player" }
+
+    Player:
+      type: object
+      description: Data representing an individual basketball player.
+      properties:
+        id: { type: string, format: uuid, description: "Unique player ID." }
+        teamId: { type: string, format: uuid, description: "ID of the team the player belongs to." }
+        firstName: { type: string, description: "Player's first name." }
+        lastName: { type: string, description: "Player's last name." }
+        number: { type: integer, description: "Jersey number." }
+        position:
+          { type: string, enum: [G, F, C, PG, SG, SF, PF], description: "Playing position." }
+        imageUrl: { type: string, format: uri, description: "Link to player photo." }
+        createdAt: { type: string, format: date-time, description: "Creation timestamp." }
+        updatedAt: { type: string, format: date-time, description: "Last update timestamp." }
+
+    Match:
+      type: object
+      description: Information about a basketball game.
+      properties:
+        id: { type: string, format: uuid, description: "Unique match ID." }
+        homeTeamId: { type: string, format: uuid, description: "ID of the home team." }
+        awayTeamId: { type: string, format: uuid, description: "ID of the away team." }
+        homeScore: { type: integer, description: "Current score for home team." }
+        awayScore: { type: integer, description: "Current score for away team." }
+        status:
+          {
+            type: string,
+            enum: [scheduled, live, finished, cancelled],
+            description: "Current match status.",
+          }
+        scheduledAt:
+          { type: string, format: date-time, description: "When the match is scheduled to start." }
+
+    Roster:
+      type: object
+      description: Selection of players for a specific match.
+      properties:
+        teamId: { type: string, format: uuid, description: "ID of the team." }
+        playerIds:
+          type: array
+          description: "List of player IDs selected for the roster."
+          items: { type: string, format: uuid }
+
+    PlayByPlay:
+      type: object
+      description: A chronological event occurring during a match.
+      properties:
+        id: { type: string, format: uuid, description: "Unique event ID." }
+        matchId: { type: string, format: uuid, description: "The match ID." }
+        teamId: { type: string, format: uuid, description: "The team involved." }
+        playerId: { type: string, format: uuid, description: "The player involved." }
+        period: { type: integer, description: "Match period (e.g., quarter)." }
+        clock: { type: integer, description: "Time remaining in the period in seconds." }
+        eventType: { type: string, description: "Type of event (e.g., shot, foul)." }
+        value:
+          {
+            type: integer,
+            description: "Numerical value associated with the event (e.g., points).",
+          }
+
+    PlayerStatistics:
+      type: object
+      description: Performance statistics for a player in a specific match.
+      properties:
+        playerId: { type: string, format: uuid, description: "Player ID." }
+        matchId: { type: string, format: uuid, description: "Match ID." }
+        minutes: { type: integer, description: "Total minutes played." }
+        points: { type: integer, description: "Total points scored." }
+        reboundsOff: { type: integer, description: "Offensive rebounds." }
+        reboundsDef: { type: integer, description: "Defensive rebounds." }
+        assists: { type: integer, description: "Total assists." }
+        steals: { type: integer, description: "Total steals." }
+        blocks: { type: integer, description: "Total blocks." }
+        turnovers: { type: integer, description: "Total turnovers." }
+        fouls: { type: integer, description: "Total fouls." }
+        insideGoalsMade: { type: integer, description: "2-pointers made." }
+        insideGoalsAttempted: { type: integer, description: "2-pointers attempted." }
+        outsideGoalsMade: { type: integer, description: "3-pointers made." }
+        outsideGoalsAttempted: { type: integer, description: "3-pointers attempted." }
+        freeThrowsMade: { type: integer, description: "Free throws made." }
+        freeThrowsAttempted: { type: integer, description: "Free throws attempted." }
+        efficiency: { type: integer, description: "Calculated efficiency rating." }
+
+    TeamStatistics:
+      type: object
+      description: Aggregate performance statistics for a team in a specific match.
+      properties:
+        teamId: { type: string, format: uuid, description: "Team ID." }
+        matchId: { type: string, format: uuid, description: "Match ID." }
+        minutes: { type: integer, description: "Total team minutes." }
+        points: { type: integer, description: "Total team points." }
+        reboundsOff: { type: integer, description: "Total offensive rebounds." }
+        reboundsDef: { type: integer, description: "Total defensive rebounds." }
+        assists: { type: integer, description: "Total team assists." }
+        steals: { type: integer, description: "Total team steals." }
+        blocks: { type: integer, description: "Total team blocks." }
+        turnovers: { type: integer, description: "Total team turnovers." }
+        fouls: { type: integer, description: "Total team fouls." }
+        insideGoalsMade: { type: integer, description: "Team 2-pointers made." }
+        insideGoalsAttempted: { type: integer, description: "Team 2-pointers attempted." }
+        outsideGoalsMade: { type: integer, description: "Team 3-pointers made." }
+        outsideGoalsAttempted: { type: integer, description: "Team 3-pointers attempted." }
+        freeThrowsMade: { type: integer, description: "Team free throws made." }
+        freeThrowsAttempted: { type: integer, description: "Team free throws attempted." }
+        efficiency: { type: integer, description: "Team efficiency rating." }
+
+paths:
+  /auth/register:
+    post:
+      tags: ["Auth"]
+      summary: Register a new account
+      description: Registers a user with email, password, and personal details.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Registration" }
+      responses:
+        "204":
+          description: Successfully created a new account
+
+  /auth/login:
+    post:
+      tags: ["Auth"]
+      summary: Login to an account
+      description: Authenticates a user and returns necessary tokens or session state.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Login" }
+      responses:
+        "204":
+          description: Successfully authenticated to an account
+
+  /auth/select:
+    post:
+      tags: ["Auth"]
+      summary: Select organization context
+      description: Sets the active organization context for the authenticated account.
+      security: [{ AccountAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Context" }
+      responses:
+        "200":
+          description: Successfully selected an organization context
+
+  /auth/refresh:
+    post:
+      tags: ["Auth"]
+      summary: Issue new access token
+      description: Refreshes the session and issues a new access token for the organization context.
+      security: [{ OrganizationAuth: [] }]
+      responses:
+        "204":
+          description: Successfully issued a new access token
+
+  /auth/logout:
+    post:
+      tags: ["Auth"]
+      summary: Logout from an account
+      description: Invalidates current session or tokens.
+      security: [{ AccountAuth: [] }]
+      responses:
+        "204":
+          description: Successfully logged out of an account
+
+  /accounts/{account_id}:
+    get:
+      tags: ["Account"]
+      summary: Get account details
+      description: Retrieves basic details and associated organizations for a specific account.
+      security: [{ AccountAuth: [] }]
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successful retrieval of account and organization list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Organization" }
+
+  /accounts/{account_id}/organizations:
+    get:
+      tags: ["Account"]
+      summary: Get organizations
+      description: Lists all organizations where the specific account is a member.
+      security: [{ AccountAuth: [] }]
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of organizations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Organization" }
+
+  /organizations:
+    get:
+      tags: ["Organizations"]
+      summary: Get organizations
+      description: Retrieves a list of detailed information for organizations available to the authenticated context.
+      security: [{ OrganizationAuth: [] }]
+      responses:
+        "200":
+          description: Returns details of organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OrganizationDetails" }
+
+  /organizations/{organization_id}:
+    get:
+      tags: ["Organizations"]
+      summary: Get organization details
+      description: Fetches comprehensive data for a single specific organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns details of a specific organization
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrganizationDetails" }
+
+  /organizations/{organization_id}/members:
+    get:
+      tags: ["Members"]
+      summary: Get organization members
+      description: Lists all members currently in the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns a list of organization members
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Member" }
+    post:
+      tags: ["Members"]
+      summary: Adds an organization member
+      description: Invites or adds a new member to the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successfully added new member to organization
+
+  /organizations/{organization_id}/members/{member_id}:
+    get:
+      tags: ["Members"]
+      summary: Get specific organization member
+      description: Retrieves details for a specific member by ID.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Member details retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Member" }
+    patch:
+      tags: ["Members"]
+      summary: Update organization member
+      description: Updates the status, roles, or groups of a specific organization member.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+    delete:
+      tags: ["Members"]
+      summary: Remove organization member
+      description: Deletes a member from the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+  /organizations/{organization_id}/groups:
+    get:
+      tags: ["Groups"]
+      summary: Get organization groups
+      description: Lists all permission groups within the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns a list of organization groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Group" }
+    post:
+      tags: ["Groups"]
+      summary: Create organization group
+      description: Creates a new permission group.
+
+  /organizations/{organization_id}/groups/{group_id}:
+    get:
+      tags: ["Groups"]
+      summary: Get specific organization group
+      description: Retrieves details of a specific permission group.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns group details
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Group" }
+    patch:
+      tags: ["Groups"]
+      summary: Update organization group
+      description: Updates group settings or members.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+    delete:
+      tags: ["Groups"]
+      summary: Delete organization group
+      description: Removes a group from the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+  /organizations/{organization_id}/roles:
+    get:
+      tags: ["Roles"]
+      summary: Get organization roles
+      description: Lists all defined roles in the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns a list of organization roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Role" }
+    post:
+      tags: ["Roles"]
+      summary: Create an organization role
+      description: Defines a new role with specific permissions.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successfully created a role
+
+  /organizations/{organization_id}/roles/{role_id}:
+    get:
+      tags: ["Roles"]
+      summary: Get specific organization role
+      description: Retrieves data for a single role.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Role details retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Role" }
+    patch:
+      tags: ["Roles"]
+      summary: Update organization role
+      description: Modifies the name or permissions of a role.
+    delete:
+      tags: ["Roles"]
+      summary: Delete organization role
+      description: Removes a role definition.
+
+  /organizations/{organization_id}/permissions:
+    get:
+      tags: ["Permissions"]
+      summary: Get organization permissions
+      description: Lists all available system permissions for the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns a list of organization permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Permission" }
+
+  /organizations/{organization_id}/logs:
+    get:
+      tags: ["AuditLogs"]
+      summary: Get organization audit logs
+      description: Retrieves a paginated list of system logs for auditing.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          description: Page number for pagination.
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          description: Items per page.
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Returns a list of organization audit logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AuditLog" }
+
+  /organizations/{organization_id}/logs/{log_id}:
+    get:
+      tags: ["AuditLogs"]
+      summary: Get specific audit log
+      description: Retrieves full details of a single audit log entry.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: log_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Specific log entry retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AuditLog" }
+
+  /organizations/{organization_id}/teams:
+    get:
+      tags: ["Teams"]
+      summary: Get organization teams
+      description: Lists all basketball teams associated with the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns a list of organization teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Team" }
+    post:
+      tags: ["Teams"]
+      summary: Create organization team
+      description: Adds a new team to the organization.
+
+  /organizations/{organization_id}/teams/{team_id}:
+    get:
+      tags: ["Teams"]
+      summary: Get specific organization team
+      description: Retrieves details for a specific team.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: team_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Team details retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Team" }
+    patch:
+      tags: ["Teams"]
+      summary: Update organization team
+      description: Updates team name, slug, or logo.
+    delete:
+      tags: ["Teams"]
+      summary: Delete organization team
+      description: Removes a team from the organization.
+
+  /organizations/{organization_id}/players:
+    get:
+      tags: ["Players"]
+      summary: Get organization players
+      description: Lists all players registered in the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns a list of organization players
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Player" }
+    post:
+      tags: ["Players"]
+      summary: Create organization player
+      description: Adds a new player to the organization pool.
+
+  /organizations/{organization_id}/players/{player_id}:
+    get:
+      tags: ["Players"]
+      summary: Get specific organization player
+      description: Retrieves profile information for a specific player.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: player_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Player details retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Player" }
+    patch:
+      tags: ["Players"]
+      summary: Update organization player
+      description: Updates player bio or stats settings.
+    delete:
+      tags: ["Players"]
+      summary: Delete organization player
+      description: Removes a player profile.
+
+  /organizations/{organization_id}/matches:
+    get:
+      tags: ["Matches"]
+      summary: Get organization matches
+      description: Lists all scheduled, live, and past matches for the organization.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns a list of organization matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Match" }
+    post:
+      tags: ["Matches"]
+      summary: Create organization match
+      description: Schedules a new match between two teams.
+
+  /organizations/{organization_id}/matches/{match_id}:
+    get:
+      tags: ["Matches"]
+      summary: Get a specific match
+      description: Retrieves the current status and primary data of a specific match.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns details of a specific match
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Match" }
+    patch:
+      tags: ["Matches"]
+      summary: Update specific match
+      description: Updates match status (e.g., move to live) or scores.
+    delete:
+      tags: ["Matches"]
+      summary: Delete specific match
+      description: Cancels and removes a match record.
+
+  /organizations/{organization_id}/matches/{match_id}/rosters:
+    get:
+      tags: ["Matches"]
+      summary: Get match rosters
+      description: Retrieves the selected players for both teams participating in the match.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns match rosters
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Roster" }
+    post:
+      tags: ["Matches"]
+      summary: Create match roster
+      description: Sets the initial roster for a team in a match.
+    patch:
+      tags: ["Matches"]
+      summary: Update match roster
+      description: Updates the player selection for a team roster.
+    delete:
+      tags: ["Matches"]
+      summary: Delete match roster
+      description: Clears the roster selection.
+
+  /organizations/{organization_id}/matches/{match_id}/play-by-play:
+    get:
+      tags: ["Play by play"]
+      summary: Get match play-by-play
+      description: Retrieves a chronological list of events for the specified match.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns a list of match play-by-play events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlayByPlay" }
+
+  /organizations/{organization_id}/matches/{match_id}/players-statistics:
+    get:
+      tags: ["Matches"]
+      summary: Get player statistics for match
+      description: Retrieves performance data for every individual player who participated in the match.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns individual player statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlayerStatistics" }
+
+  /organizations/{organization_id}/matches/{match_id}/teams-statistics:
+    get:
+      tags: ["Matches"]
+      summary: Get team statistics for match
+      description: Retrieves aggregated performance data for the teams in the specific match.
+      security: [{ OrganizationAuth: [] }]
+      parameters:
+        - name: organization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: match_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Returns team-level statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TeamStatistics" }

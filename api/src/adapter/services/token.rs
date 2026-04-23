@@ -30,6 +30,10 @@ pub struct AccessClaims {
     pub auth_version: i32,
     pub iid: Uuid,
     pub oid: Uuid,
+
+    pub roles: Vec<Uuid>,
+    pub permissions: Vec<String>,
+    pub status: String,
 }
 
 #[derive(Serialize, Deserialize)]
