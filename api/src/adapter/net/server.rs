@@ -41,7 +41,7 @@ impl Gateway {
     pub fn with_accounts(mut self) -> Self {
         self.router = self.router.nest(
             "/api/v1/accounts",
-            AccountHandler::v1(self.services.clone()),
+            AccountsHandler::v1(self.services.clone()),
         );
         self
     }
@@ -58,7 +58,7 @@ impl Gateway {
             .router
             .nest(
                 &format!("{}/members", prefix),
-                MemberHandler::v1(self.services.clone()),
+                MembersHandler::v1(self.services.clone()),
             )
             .nest(
                 &format!("{}/groups", prefix),
@@ -75,18 +75,6 @@ impl Gateway {
             .nest(
                 &format!("{}/logs", prefix),
                 AuditLogHandler::v1(self.services.clone()),
-            )
-            .nest(
-                &format!("{}/teams", prefix),
-                TeamHandler::v1(self.services.clone()),
-            )
-            .nest(
-                &format!("{}/players", prefix),
-                PlayerHandler::v1(self.services.clone()),
-            )
-            .nest(
-                &format!("{}/matches", prefix),
-                MatchHandler::v1(self.services.clone()),
             );
 
         self
