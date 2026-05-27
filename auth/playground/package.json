@@ -1,0 +1,14 @@
+{
+    "name": "basketball-auth-playground",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "nuxt dev",
+        "build": "nuxt build",
+        "generate": "nuxt generate"
+    },
+    "dependencies": {
+        "basketball-auth": "file:..",
+        "nuxt": "^4.4.6"
+    }
+}

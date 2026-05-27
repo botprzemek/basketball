@@ -1,0 +1,57 @@
+{
+    "name": "basketball-auth",
+    "version": "1.0.0",
+    "description": "Basketball Auth",
+    "license": "MIT",
+    "repository": "your-org/my-module",
+    "workspaces": [
+        ".",
+        "playground"
+    ],
+    "files": [
+        "dist"
+    ],
+    "type": "module",
+    "main": "./dist/module.mjs",
+    "typesVersions": {
+        "*": {
+            ".": [
+                "./dist/types.d.mts"
+            ]
+        }
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/types.d.mts",
+            "import": "./dist/module.mjs"
+        }
+    },
+    "scripts": {
+        "prepack": "nuxt-module-build build",
+        "dev": "npm run dev:prepare && nuxt dev playground",
+        "dev:build": "nuxt build playground",
+        "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
+        "release": "npm run lint && npm run test && npm run prepack && changelogen --release && npm publish && git push --follow-tags",
+        "lint": "eslint .",
+        "test": "vitest run",
+        "test:watch": "vitest watch",
+        "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
+    },
+    "dependencies": {
+        "@nuxt/kit": "^4.4.6"
+    },
+    "devDependencies": {
+        "@nuxt/devtools": "^3.2.4",
+        "@nuxt/eslint-config": "^1.15.2",
+        "@nuxt/module-builder": "^1.0.2",
+        "@nuxt/schema": "^4.4.6",
+        "@nuxt/test-utils": "^4.0.3",
+        "@types/node": "latest",
+        "nuxt": "^4.4.6",
+        "oxfmt": "^0.52.0",
+        "oxlint": "^1.67.0",
+        "oxlint-tsgolint": "^0.23.0",
+        "typescript": "^5.8.3",
+        "vitest": "^4.1.7"
+    }
+}

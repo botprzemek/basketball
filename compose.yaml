@@ -16,7 +16,7 @@ volumes:
     name: basketball-grafana
 
 x-db-common: &db-common
-  image: "cockroachdb/cockroach:latest-v23.2"
+  image: "cockroachdb/cockroach:latest-v26.1"
   restart: always
   networks:
     basketball:
@@ -49,8 +49,8 @@ services:
       database-1:
         condition: service_started
 
-  init-database:
-    image: "cockroachdb/cockroach:latest-v23.2"
+  init-cluster:
+    image: "cockroachdb/cockroach:latest-v26.1"
     command: init --insecure --host=basketball-database-1
     networks:
       basketball:
@@ -80,7 +80,7 @@ services:
     networks:
       basketball:
     depends_on:
-      init-database:
+      init-cluster:
         condition: service_completed_successfully
       cache:
         condition: service_started
@@ -97,26 +97,6 @@ services:
     depends_on:
       api:
         condition: service_started
-
-  metrics:
-    image: grafana/grafana:13.0.0-23943897787-ubuntu
-    container_name: basketball-grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://localhost:3000/metrics
-    volumes:
-      - grafana:/var/lib/grafana
-    networks:
-      basketball:
-
-  monitoring:
-    image: prom/prometheus:v3.10.0-distroless
-    container_name: basketball-prometheus
-    networks:
-      basketball:
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
   proxy:
     image: nginx:1.29-alpine

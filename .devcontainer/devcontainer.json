@@ -1,21 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/devcontainers/spec/refs/heads/main/schemas/devContainer.schema.json",
   "name": "basketball",
-  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.devcontainer.yml"],
+  "dockerComposeFile": ["../compose.yaml", "./compose.yaml"],
   "service": "devcontainer",
-  "runServices": [
-    "database-1",
-    "database-2",
-    "database-3",
-    "init-database",
-    "cache",
-    "metrics",
-    "monitoring",
-    "devcontainer"
-  ],
+  "runServices": ["database-1", "database-2", "database-3", "cache", "devcontainer"],
   "workspaceFolder": "/workspace/basketball",
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/node:2.0.0": {},
     "ghcr.io/devcontainers/features/rust:1": {}
   },
   "postStartCommand": "sudo service nginx start && exit",
@@ -103,7 +94,7 @@
         "terminal.integrated.wordWrap": "off",
 
         "chat.agent.enabled": false,
-        "chat.agentsControl.enabled": false,
+        "chat.agentsControl.enabled": "hidden",
         "chat.checkpoints.enabled": false,
         "chat.extensionTools.enabled": false,
         "chat.tips.enabled": false,
@@ -127,7 +118,6 @@
         "oxc.fixKind": "all",
         "oxc.trace.server": "verbose",
         "oxc.typeAware": true,
-        "oxc.fmt.configPath": "./app",
 
         "rust-analyzer.check.command": "clippy",
         "rust-analyzer.cargo.buildScripts.enable": true,
