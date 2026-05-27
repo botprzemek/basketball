@@ -14,6 +14,6 @@ restore();
 
 <template>
     {{ user }}
-    <button @click="handleLogin" v-if="!isAuthenticated">Login</button>
-    <button @click="handleLogout" v-else>Logout</button>
+    <UButton @click="handleLogin" v-if="!isAuthenticated">Login</UButton>
+    <UButton @click="handleLogout" v-else>Logout</UButton>
 </template>

@@ -14,8 +14,17 @@ export default defineNuxtModule<ModuleOptions>({
     },
 
     defaults: {},
-    setup(_options, _nuxt) {
+    moduleDependencies: {
+        "@nuxt/ui": {
+            version: ">=4",
+        },
+    },
+    setup(_options, nuxt) {
         const resolver = createResolver(import.meta.url);
+
+        nuxt.options.css.push(
+            resolver.resolve("./runtime/app/assets/css/main.css"),
+        );
 
         addImportsDir(resolver.resolve("./runtime/app/composables"));
 
