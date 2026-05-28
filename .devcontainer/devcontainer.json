@@ -118,6 +118,8 @@
         "oxc.fixKind": "all",
         "oxc.trace.server": "verbose",
         "oxc.typeAware": true,
+        "oxc.configPath": null,
+        "oxc.disableNestedConfig": false,
 
         "rust-analyzer.check.command": "clippy",
         "rust-analyzer.cargo.buildScripts.enable": true,

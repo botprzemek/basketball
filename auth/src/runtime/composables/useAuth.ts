@@ -1,9 +1,16 @@
-import { clearNuxtState, computed, useFetch, useState } from "#imports";
+import {
+    clearNuxtState,
+    computed,
+    useFetch,
+    useNuxtApp,
+    useState,
+} from "#imports";
 
 export const useAuth = () => {
-    const user = useState<any | null>("auth_user", () => null);
+    const nuxtApp = useNuxtApp();
+    const session = useState<any | null>("auth_session", () => null);
 
-    const isAuthenticated = computed(() => !!user.value);
+    const isAuthenticated = computed(() => !!session.value);
 
     const login = async (email: string, password: string) => {
         try {
@@ -12,9 +19,9 @@ export const useAuth = () => {
                 body: { email, password },
             });
 
-            user.value = data;
+            session.value = data;
 
-            return { success: true };
+            await nuxtApp.callHook("auth:login", "/auth");
         } catch (error) {
             console.error("Login failed", error);
             return { success: false, error };
@@ -26,7 +33,7 @@ export const useAuth = () => {
             method: "GET",
         });
 
-        user.value = data.value;
+        session.value = data.value;
     };
 
     const logout = async () => {
@@ -34,11 +41,13 @@ export const useAuth = () => {
             method: "POST",
         });
 
-        clearNuxtState("auth_user");
+        clearNuxtState("auth_session");
+
+        await nuxtApp.callHook("auth:logout", "/");
     };
 
     return {
-        user,
+        session,
         isAuthenticated,
         login,
         restore,

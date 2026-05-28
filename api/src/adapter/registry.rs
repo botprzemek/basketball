@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use crate::adapter::{
     config::DatabaseConfig,
     providers::PostgresProvider,
     repositories::{
-        AccountRepository, IdentityRepository, MemberRepository, OrganizationRepository,
+        AccountRepository, OrganizationRepository, IdentityRepository, MemberRepository
     },
 };
 
@@ -15,21 +17,13 @@ pub struct Registry {
 
 impl Registry {
     pub async fn new(config: &impl DatabaseConfig) -> anyhow::Result<Self> {
-        let postgres = PostgresProvider::new(config).await?;
-
-        let (account_repository, organization_repository, identity_repository, member_repository) =
-            tokio::try_join!(
-                AccountRepository::new(postgres.get()),
-                OrganizationRepository::new(postgres.get()),
-                IdentityRepository::new(postgres.get()),
-                MemberRepository::new(postgres.get())
-            )?;
+        let provider = Arc::new(PostgresProvider::new(config).await?);
 
         Ok(Self {
-            account_repository,
-            organization_repository,
-            identity_repository,
-            member_repository,
+            account_repository: AccountRepository::new(provider),
+            organization_repository: OrganizationRepository::new(provider),
+            identity_repository: IdentityRepository::new(provider),
+            member_repository: MemberRepository::new(provider),
         })
     }
 }

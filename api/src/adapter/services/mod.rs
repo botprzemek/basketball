@@ -38,7 +38,7 @@ pub struct Services {
 impl Services {
     pub fn new(registry: &Registry) -> Self {
         let password = PasswordService::new();
-
+        
         let account = AccountApplication::new(registry.account_repository.clone());
         let organization = OrganizationApplication::new(registry.organization_repository.clone());
         let identity = IdentityApplication::new(registry.identity_repository.clone());

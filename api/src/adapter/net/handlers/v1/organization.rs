@@ -95,8 +95,8 @@ impl OrganizationHandler {
 
     pub fn v1(services: Arc<Services>) -> Router {
         Router::new()
-            .route("/", get(Self::organization))
-            .route("/members", get(Self::members))
+            .route("/{id}", get(Self::organization))
+            .route("/{id}/members", get(Self::members))
             .with_state(services)
     }
 }

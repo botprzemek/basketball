@@ -3,8 +3,6 @@ pub mod v1;
 pub use v1::AuthenticationHandler;
 pub use v1::OrganizationHandler;
 
-pub use v1::system;
-
 use axum::http::StatusCode;
 use serde::Deserialize;
 use std::fmt::Display;

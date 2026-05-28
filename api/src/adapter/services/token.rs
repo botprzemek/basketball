@@ -33,7 +33,6 @@ pub struct AccessClaims {
 
     pub roles: Vec<Uuid>,
     pub permissions: Vec<String>,
-    pub status: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -117,6 +116,9 @@ impl TokenService {
             auth_version: 1,
             iid: identity_id,
             oid: organization_id,
+            
+            roles: vec![],
+            permissions: vec![],
         };
         let refresh = RefreshClaims {
             iss: self.issuer.clone(),

@@ -1,9 +1,6 @@
 {
     "name": "basketball-auth",
     "version": "1.0.0",
-    "description": "Basketball Auth",
-    "license": "MIT",
-    "repository": "your-org/my-module",
     "workspaces": [
         ".",
         "playground"
@@ -46,7 +43,6 @@
         "@nuxt/module-builder": "^1.0.2",
         "@nuxt/schema": "^4.4.6",
         "@nuxt/test-utils": "^4.0.3",
-        "@nuxt/ui": "^4.8.0",
         "@types/node": "latest",
         "nuxt": "^4.4.6",
         "oxfmt": "^0.52.0",

@@ -7,7 +7,6 @@ use crate::adapter::{
     config::ServerConfig,
     net::handlers::{
         AuthenticationHandler, OrganizationHandler,
-        system::{AccountsHandler, IdentitiesHandler, OrganizationsHandler},
     },
 };
 
@@ -38,44 +37,36 @@ impl Gateway {
         self
     }
 
-    pub fn with_accounts(mut self) -> Self {
-        self.router = self.router.nest(
-            "/api/v1/accounts",
-            AccountsHandler::v1(self.services.clone()),
-        );
-        self
-    }
-
     pub fn with_organizations(mut self) -> Self {
         self.router = self.router.nest(
             "/api/v1/organizations",
             OrganizationHandler::v1(self.services.clone()),
         );
 
-        let prefix = "/api/v1/organizations/{organization_id}";
+        // let prefix = "/api/v1/organizations/{organization_id}";
 
-        self.router = self
-            .router
-            .nest(
-                &format!("{}/members", prefix),
-                MembersHandler::v1(self.services.clone()),
-            )
-            .nest(
-                &format!("{}/groups", prefix),
-                GroupHandler::v1(self.services.clone()),
-            )
-            .nest(
-                &format!("{}/roles", prefix),
-                RoleHandler::v1(self.services.clone()),
-            )
-            .nest(
-                &format!("{}/permissions", prefix),
-                PermissionHandler::v1(self.services.clone()),
-            )
-            .nest(
-                &format!("{}/logs", prefix),
-                AuditLogHandler::v1(self.services.clone()),
-            );
+        // self.router = self
+        //     .router
+        //     .nest(
+        //         &format!("{}/members", prefix),
+        //         MembersHandler::v1(self.services.clone()),
+        //     )
+        //     .nest(
+        //         &format!("{}/groups", prefix),
+        //         GroupHandler::v1(self.services.clone()),
+        //     )
+        //     .nest(
+        //         &format!("{}/roles", prefix),
+        //         RoleHandler::v1(self.services.clone()),
+        //     )
+        //     .nest(
+        //         &format!("{}/permissions", prefix),
+        //         PermissionHandler::v1(self.services.clone()),
+        //     )
+        //     .nest(
+        //         &format!("{}/logs", prefix),
+        //         AuditLogHandler::v1(self.services.clone()),
+        //     );
 
         self
     }
@@ -90,13 +81,7 @@ impl Gateway {
     }
 
     pub fn with_v1(mut self) -> Self {
-        let routes_v1 = Router::new()
-            .nest("/accounts", AccountsHandler::v1(self.services.clone()))
-            .nest(
-                "/organizations",
-                OrganizationsHandler::v1(self.services.clone()),
-            )
-            .nest("/identities", IdentitiesHandler::v1(self.services.clone()));
+        let routes_v1 = Router::new();
 
         self.router = self.router.nest("/api/v1/system", routes_v1);
 

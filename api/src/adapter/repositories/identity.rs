@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tokio_postgres::{Client, Row, Statement, types::Type};
 use uuid::Uuid;
 
 use crate::domain::{
@@ -11,14 +10,7 @@ use crate::domain::{
 
 #[derive(Clone)]
 pub struct IdentityRepository {
-    client: Arc<Client>,
-    select: Statement,
-    select_by_self: Statement,
-    select_by_account: Statement,
-    select_by_account_identity: Statement,
-    insert: Statement,
-    update: Statement,
-    delete: Statement,
+    provider: Arc<PostgresProvider>,
 }
 
 impl From<&Row> for Identity {

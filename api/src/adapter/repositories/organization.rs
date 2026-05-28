@@ -1,220 +1,144 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tokio_postgres::{Client, Row, Statement, types::Type};
+use chrono::{DateTime, Utc};
+use diesel::{
+    prelude::*,
+};
+use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::domain::{entities::Organization, ports::OrganizationPort};
+use crate::adapter::{
+    providers::PostgresProvider,
+    repositories::schema::organizations::dsl::*,
+};
+use crate::domain::{
+    entities::Organization,
+    ports::OrganizationPort,
+};
+
+diesel::table! {
+    basketball.organizations (id) {
+        id -> Uuid,
+        name -> Text,
+        slug -> Text,
+        is_active -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Nullable<Timestamptz>,
+    }
+}
 
 #[derive(Clone)]
 pub struct OrganizationRepository {
-    client: Arc<Client>,
-    select: Statement,
-    select_by_self: Statement,
-    insert: Statement,
-    update: Statement,
-    delete: Statement,
+    provider: Arc<PostgresProvider>,
 }
 
-impl From<&Row> for Organization {
-    fn from(row: &Row) -> Self {
+#[derive(Debug, Clone, Queryable, Selectable, Insertable, Identifiable, AsChangeset)]
+#[diesel(table_name = crate::adapter::repositories::schema::organizations)]
+#[diesel(check_for_backend(diesel::pg::Pg))] 
+pub struct OrganizationRow {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+impl From<OrganizationRow> for Organization {
+    fn from(organization: OrganizationRow) -> Self {
         Self {
-            id: row.get("id"),
-            name: row.get("name"),
-            slug: row.get("slug"),
-            is_active: row.get("is_active"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+            is_active: organization.is_active,
+            created_at: organization.created_at,
+            updated_at: organization.updated_at,
+        }
+    }
+}
+
+impl From<Organization> for OrganizationRow {
+    fn from(organization: Organization) -> Self {
+        Self {
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+            is_active: organization.is_active,
+            created_at: organization.created_at,
+            updated_at: organization.updated_at,
         }
     }
 }
 
 impl OrganizationRepository {
-    pub async fn new(client: Arc<Client>) -> anyhow::Result<Self> {
-        client.batch_execute("
-            CREATE TABLE IF NOT EXISTS basketball.organizations (
-                id UUID PRIMARY KEY,
-                name STRING NOT NULL,
-                slug STRING UNIQUE NOT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ
-            );
-        
-            CREATE INDEX IF NOT EXISTS idx_organizations_name ON basketball.organizations(name);
-            CREATE INDEX IF NOT EXISTS idx_organizations_slug ON basketball.organizations(slug DESC);
-            CREATE INDEX IF NOT EXISTS idx_organizations_created_at ON basketball.organizations(created_at DESC);
-        ")
-            .await?;
-
-        let select = client
-            .prepare_typed(
-                "
-                SELECT
-                    id,
-                    name,
-                    slug,
-                    is_active,
-                    created_at,
-                    updated_at
-                FROM basketball.organizations
-            ",
-                &[],
-            )
-            .await?;
-
-        let select_by_self = client
-            .prepare_typed(
-                "
-                SELECT
-                    id,
-                    name,
-                    slug,
-                    is_active,
-                    created_at,
-                    updated_at
-                FROM basketball.organizations
-                WHERE id = $1
-            ",
-                &[Type::UUID],
-            )
-            .await?;
-
-        let insert = client
-            .prepare_typed(
-                "
-                INSERT INTO basketball.organizations (
-                    id,
-                    name,
-                    slug,
-                    is_active,
-                    created_at,
-                    updated_at
-                )
-                VALUES (
-                    $1,
-                    $2,
-                    $3,
-                    $4,
-                    $5,
-                    $6
-                )
-            ",
-                &[
-                    Type::UUID,
-                    Type::TEXT,
-                    Type::TEXT,
-                    Type::BOOL,
-                    Type::TIMESTAMPTZ,
-                    Type::TIMESTAMPTZ,
-                ],
-            )
-            .await?;
-
-        let update = client
-            .prepare_typed(
-                "
-                UPDATE basketball.organizations
-                SET (
-                    name,
-                    slug,
-                    is_active,
-                    updated_at
-                ) = (
-                    $1,
-                    $2,
-                    $3,
-                    $4
-                )
-            ",
-                &[Type::TEXT, Type::TEXT, Type::BOOL, Type::TIMESTAMPTZ],
-            )
-            .await?;
-
-        let delete = client
-            .prepare_typed(
-                "
-                DELETE
-                FROM basketball.organizations
-                WHERE id = $1
-            ",
-                &[Type::UUID],
-            )
-            .await?;
-
-        Ok(Self {
-            client,
-            select,
-            select_by_self,
-            insert,
-            update,
-            delete,
-        })
+    pub fn new(provider: Arc<PostgresProvider>) -> Self {
+        Self {
+            provider,
+        }
     }
 }
 
 #[async_trait]
 impl OrganizationPort for OrganizationRepository {
     async fn select(&self) -> anyhow::Result<Vec<Organization>> {
-        let result = self
-            .client
-            .query(&self.select.clone(), &[])
+        let connection = &mut self.provider.get().await?;
+        let results = organizations
+            .select(OrganizationRow::as_select())
+            .get_results::<OrganizationRow>(&mut connection)
             .await?
-            .iter()
+            .into_iter()
             .map(Organization::from)
-            .collect::<Vec<Organization>>();
+            .collect();
 
-        Ok(result)
+        Ok(results)
     }
 
-    async fn select_by_self(&self, id: Uuid) -> anyhow::Result<Option<Organization>> {
-        let result = self
-            .client
-            .query(&self.select_by_self.clone(), &[&id])
-            .await?
-            .first()
+    async fn select_by_self(&self, self_id: Uuid) -> anyhow::Result<Option<Organization>> {
+        let connection = &mut self.provider.get().await?;
+        let result = organizations
+            .select(OrganizationRow::as_select())
+            .filter(id.eq(self_id))
+            .first(connection)
+            .await
+            .optional()?
             .map(Organization::from);
 
         Ok(result)
     }
 
     async fn insert(&self, organization: Organization) -> anyhow::Result<Organization> {
-        self.client
-            .execute(
-                &self.insert.clone(),
-                &[
-                    &organization.id,
-                    &organization.name,
-                    &organization.slug,
-                    &organization.is_active,
-                    &organization.created_at,
-                    &organization.updated_at,
-                ],
-            )
-            .await?;
+        let connection = &mut self.provider.get().await?;
+        let result = organizations
+            .select(OrganizationRow::as_select())
+            .load::<OrganizationRow>(&mut connection)
+            .await?
+            .into_iter()
+            .map(Organization::from)
+            .collect();
 
         Ok(organization)
     }
 
     async fn update(&self, organization: Organization) -> anyhow::Result<Organization> {
-        self.client
-            .execute(
-                &self.update.clone(),
-                &[
-                    &organization.name,
-                    &organization.slug,
-                    &organization.is_active,
-                    &organization.updated_at,
-                ],
-            )
-            .await?;
+        let connection = &mut self.provider.get().await?;
+        let result = organizations
+            .select(OrganizationRow::as_select())
+            .load::<OrganizationRow>(connection)
+            .await?
+            .into_iter()
+            .map(Organization::from)
+            .collect();
 
         Ok(organization)
     }
 
-    async fn delete(&self, id: Uuid) -> anyhow::Result<()> {
-        self.client.execute(&self.delete.clone(), &[&id]).await?;
-
+    async fn delete(&self, self_id: Uuid) -> anyhow::Result<()> {
+        let connection = &mut self.provider.get().await?;
+        let _result = diesel::delete(
+            organizations.filter(id.eq(self_id))
+        ).execute(connection).await?;
+        
         Ok(())
     }
 }
