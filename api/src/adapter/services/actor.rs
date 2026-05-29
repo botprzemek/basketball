@@ -4,7 +4,7 @@ use crate::adapter::services::{
     AccountService, IdentityService, OrganizationService, PasswordService, TokenService,
     token::AuthenticationState,
 };
-use crate::domain::entities::{AccountIdentity, Actor};
+use crate::domain::entities::{Actor, Identity, Organization};
 use crate::domain::{applications::CreateAccount, entities::Account};
 
 pub struct ActorService {
@@ -65,10 +65,12 @@ impl ActorService {
         password: String,
     ) -> anyhow::Result<AuthenticationState> {
         let account = self.account.find_by_email(email).await?;
+
         let hash_to_verify = match &account {
-            Some(acc) => acc.password_hash.clone(),
+            Some(account) => account.password_hash.clone(),
             None => DUMMY_HASH.to_string(),
         };
+
         let is_password_ok = self.password.verify(password, hash_to_verify).await.is_ok();
 
         match (account, is_password_ok) {
@@ -77,7 +79,7 @@ impl ActorService {
         }
     }
 
-    pub async fn identities(&self, token: &str) -> anyhow::Result<Vec<AccountIdentity>> {
+    pub async fn identities(&self, token: &str) -> anyhow::Result<Vec<(Identity, Organization)>> {
         match self.token.authenticate(token)? {
             Actor::Selection(actor) => self.identity.find_by_account(actor.account_id).await,
             Actor::Authorized(_) => Err(anyhow::anyhow!("Already logged in")),
@@ -91,19 +93,19 @@ impl ActorService {
     ) -> anyhow::Result<AuthenticationState> {
         match self.token.authenticate(token)? {
             Actor::Selection(actor) => {
-                let account_identity = match self
+                let identity = match self
                     .identity
                     .find_by_account_identity(actor.account_id, selected_identity)
                     .await?
                 {
-                    Some(account_identity) => account_identity,
+                    Some(identity) => identity,
                     None => return Err(anyhow::anyhow!("Not valid")),
                 };
 
                 Ok(self.token.issue_authentication(
                     actor.account_id,
-                    account_identity.identity_id,
-                    account_identity.organization_id,
+                    identity.id,
+                    identity.organization_id,
                 )?)
             }
             Actor::Authorized(_) => Err(anyhow::anyhow!("Already logged in")),

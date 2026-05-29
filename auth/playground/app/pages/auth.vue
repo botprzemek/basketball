@@ -8,12 +8,19 @@ const { session, isAuthenticated, logout } = useAuth();
 const handleLogout = async () => {
     await logout();
 };
+
+const handleTest = async () => {
+    await $fetch("http://localhost:3000/api/v1/auth/me", {
+        method: "GET",
+        credentials: "include",
+    });
+};
 </script>
 
 <template>
     <button @click="handleLogout()">Logout</button>
     <p>
-        Session({{ isAuthenticated }}):
         {{ session }}
+        <button @click="handleTest()">Test</button>
     </p>
 </template>

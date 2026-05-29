@@ -1,3 +1,7 @@
+networks:
+  basketball:
+    external: true
+
 services:
   devcontainer:
     image: basketball/devcontainer:0.1.0
@@ -14,12 +18,13 @@ services:
     tty: true
     stdin_open: true
     command: /bin/bash
+    environment:
+      API_SERVER_HOST: 0.0.0.0
+      API_SERVER_PORT: 3000
 
-  api:
-    profiles: ["donotstart"]
-  
-  app:
-    profiles: ["donotstart"]
+      API_DATABASE_HOST: basketball-database-1
+      API_DATABASE_PORT: 26257
+      API_DATABASE_NAME: dev
 
-  proxy:
-    profiles: ["donotstart"]
+      API_CACHE_HOST: basketball-cache
+      API_CACHE_PORT: 6379

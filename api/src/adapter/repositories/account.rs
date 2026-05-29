@@ -1,273 +1,143 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use diesel::{
+    prelude::*,
+};
+use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::domain::{entities::Account, ports::AccountPort};
+use crate::adapter::{
+    providers::PostgresProvider,
+    repositories::accounts::dsl::*,
+};
+use crate::domain::{
+    entities::Account,
+    ports::AccountPort,
+};
 
 #[derive(Clone)]
 pub struct AccountRepository {
     provider: Arc<PostgresProvider>,
 }
 
-impl From<&Row> for Account {
-    fn from(row: &Row) -> Self {
+#[derive(Debug, Clone, Queryable, Selectable, Insertable, Identifiable, AsChangeset)]
+#[diesel(table_name = crate::adapter::repositories::accounts)]
+#[diesel(check_for_backend(diesel::pg::Pg))] 
+pub struct AccountRow {
+    pub id: Uuid,
+    pub email: String,
+    pub password_hash: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+impl From<AccountRow> for Account {
+    fn from(account: AccountRow) -> Self {
         Self {
-            id: row.get("id"),
-            email: row.get("email"),
-            password_hash: row.get("password_hash"),
-            first_name: row.get("first_name"),
-            last_name: row.get("last_name"),
-            is_active: row.get("is_active"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
+            id: account.id,
+            email: account.email,
+            password_hash: account.password_hash,
+            first_name: account.first_name,
+            last_name: account.last_name,
+            is_active: account.is_active,
+            created_at: account.created_at,
+            updated_at: account.updated_at,
+        }
+    }
+}
+
+impl From<Account> for AccountRow {
+    fn from(account: Account) -> Self {
+        Self {
+            id: account.id,
+            email: account.email,
+            password_hash: account.password_hash,
+            first_name: account.first_name,
+            last_name: account.last_name,
+            is_active: account.is_active,
+            created_at: account.created_at,
+            updated_at: account.updated_at,
         }
     }
 }
 
 impl AccountRepository {
-    pub async fn new(client: Arc<Client>) -> anyhow::Result<Self> {
-        client.batch_execute("
-            CREATE TABLE IF NOT EXISTS basketball.accounts (
-                id UUID PRIMARY KEY,
-                email STRING UNIQUE NOT NULL,
-                password_hash STRING NOT NULL,
-                first_name STRING NOT NULL,
-                last_name STRING NOT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_accounts_email ON basketball.accounts(email);
-            CREATE INDEX IF NOT EXISTS idx_accounts_created_at ON basketball.accounts(created_at DESC);
-        ")
-            .await?;
-
-        let select = client
-            .prepare_typed(
-                "
-                SELECT
-                    id,
-                    email,
-                    password_hash,
-                    first_name,
-                    last_name,
-                    is_active,
-                    created_at,
-                    updated_at
-                FROM basketball.accounts
-            ",
-                &[],
-            )
-            .await?;
-
-        let select_by_self = client
-            .prepare_typed(
-                "
-                SELECT
-                    id,
-                    email,
-                    password_hash,
-                    first_name,
-                    last_name,
-                    is_active,
-                    created_at,
-                    updated_at
-                FROM basketball.accounts
-                WHERE id = $1
-            ",
-                &[Type::UUID],
-            )
-            .await?;
-
-        let select_by_email = client
-            .prepare_typed(
-                "
-                SELECT
-                    id,
-                    email,
-                    password_hash,
-                    first_name,
-                    last_name,
-                    is_active,
-                    created_at,
-                    updated_at
-                FROM basketball.accounts
-                WHERE email = $1
-            ",
-                &[Type::TEXT],
-            )
-            .await?;
-
-        let insert = client
-            .prepare_typed(
-                "
-                INSERT INTO basketball.accounts (
-                    id,
-                    email,
-                    password_hash,
-                    first_name,
-                    last_name,
-                    is_active,
-                    created_at,
-                    updated_at
-                )
-                VALUES (
-                    $1,
-                    $2,
-                    $3,
-                    $4,
-                    $5,
-                    $6,
-                    $7,
-                    $8
-                )
-            ",
-                &[
-                    Type::UUID,
-                    Type::TEXT,
-                    Type::TEXT,
-                    Type::TEXT,
-                    Type::TEXT,
-                    Type::BOOL,
-                    Type::TIMESTAMPTZ,
-                    Type::TIMESTAMPTZ,
-                ],
-            )
-            .await?;
-
-        let update = client
-            .prepare_typed(
-                "
-                UPDATE basketball.accounts
-                SET (
-                    email,
-                    password_hash,
-                    first_name,
-                    last_name,
-                    is_active,
-                    updated_at
-                ) = (
-                    $1,
-                    $2,
-                    $3,
-                    $4,
-                    $5,
-                    $6
-                )
-            ",
-                &[
-                    Type::TEXT,
-                    Type::TEXT,
-                    Type::TEXT,
-                    Type::TEXT,
-                    Type::BOOL,
-                    Type::TIMESTAMPTZ,
-                ],
-            )
-            .await?;
-
-        let delete = client
-            .prepare_typed(
-                "
-                DELETE
-                FROM basketball.accounts
-                WHERE id = $1
-            ",
-                &[Type::UUID],
-            )
-            .await?;
-
-        Ok(Self {
-            client,
-            select,
-            select_by_self,
-            select_by_email,
-            insert,
-            update,
-            delete,
-        })
+    pub fn new(provider: Arc<PostgresProvider>) -> Self {
+        Self {
+            provider,
+        }
     }
 }
 
 #[async_trait]
 impl AccountPort for AccountRepository {
     async fn select(&self) -> anyhow::Result<Vec<Account>> {
-        let result = self
-            .client
-            .query(&self.select.clone(), &[])
+        let connection = &mut self.provider.get().await?;
+        let results = accounts
+            .select(AccountRow::as_select())
+            .get_results::<AccountRow>(connection)
             .await?
-            .iter()
+            .into_iter()
             .map(Account::from)
-            .collect::<Vec<Account>>();
+            .collect::<Vec<_>>();
 
-        Ok(result)
+        Ok(results)
     }
 
-    async fn select_by_self(&self, id: Uuid) -> anyhow::Result<Option<Account>> {
-        let result = self
-            .client
-            .query(&self.select_by_self.clone(), &[&id])
-            .await?
-            .first()
+    async fn select_by_self(&self, self_id: Uuid) -> anyhow::Result<Option<Account>> {
+        let connection = &mut self.provider.get().await?;
+        let result = accounts
+            .select(AccountRow::as_select())
+            .filter(id.eq(self_id))
+            .first(connection)
+            .await
+            .optional()?
             .map(Account::from);
 
         Ok(result)
     }
 
-    async fn select_by_email(&self, email: String) -> anyhow::Result<Option<Account>> {
-        let result = self
-            .client
-            .query(&self.select_by_email.clone(), &[&email])
-            .await?
-            .first()
+    async fn select_by_email(&self, self_email: String) -> anyhow::Result<Option<Account>> {
+        let connection = &mut self.provider.get().await?;
+        let result = accounts
+            .select(AccountRow::as_select())
+            .filter(email.eq(self_email))
+            .first(connection)
+            .await
+            .optional()?
             .map(Account::from);
 
         Ok(result)
     }
 
     async fn insert(&self, account: Account) -> anyhow::Result<Account> {
-        self.client
-            .execute(
-                &self.insert.clone(),
-                &[
-                    &account.id,
-                    &account.email,
-                    &account.password_hash,
-                    &account.first_name,
-                    &account.last_name,
-                    &account.is_active,
-                    &account.created_at,
-                    &account.updated_at,
-                ],
-            )
-            .await?;
+        let connection = &mut self.provider.get().await?;
+        let result = diesel::insert_into(accounts)
+            .values(AccountRow::from(account))
+            .get_result::<AccountRow>(connection)
+            .await
+            .map(Account::from)?;
 
-        Ok(account)
+        Ok(result)
     }
 
     async fn update(&self, account: Account) -> anyhow::Result<Account> {
-        self.client
-            .execute(
-                &self.update.clone(),
-                &[
-                    &account.email,
-                    &account.password_hash,
-                    &account.first_name,
-                    &account.last_name,
-                    &account.is_active,
-                    &account.updated_at,
-                ],
-            )
-            .await?;
+        let _connection = &mut self.provider.get().await?;
 
         Ok(account)
     }
 
-    async fn delete(&self, id: Uuid) -> anyhow::Result<()> {
-        self.client.execute(&self.delete.clone(), &[&id]).await?;
-
+    async fn delete(&self, self_id: Uuid) -> anyhow::Result<()> {
+        let connection = &mut self.provider.get().await?;
+        let _result = diesel::delete(
+            accounts.filter(id.eq(self_id))
+        ).execute(connection).await?;
+        
         Ok(())
     }
 }

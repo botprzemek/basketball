@@ -3,7 +3,7 @@
   "name": "basketball",
   "dockerComposeFile": ["../compose.yaml", "./compose.yaml"],
   "service": "devcontainer",
-  "runServices": ["database-1", "database-2", "database-3", "cache", "devcontainer"],
+  "runServices": ["database-1", "database-2", "database-3", "migrate-cluster", "init-cluster", "cache", "devcontainer"],
   "workspaceFolder": "/workspace/basketball",
   "features": {
     "ghcr.io/devcontainers/features/node:2.0.0": {},

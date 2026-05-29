@@ -3,7 +3,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::domain::{
-    entities::{AccountIdentity, Identity},
+    entities::{Identity, Organization},
     ports::IdentityPort,
 };
 
@@ -36,17 +36,17 @@ impl<O: IdentityPort> IdentityApplication<O> {
         self.identity_service.select_by_self(identity_id).await
     }
 
-    pub async fn find_by_account(&self, account_id: Uuid) -> anyhow::Result<Vec<AccountIdentity>> {
+    pub async fn find_by_account(&self, account_id: Uuid) -> anyhow::Result<Vec<(Identity, Organization)>> {
         self.identity_service.select_by_account(account_id).await
     }
 
     pub async fn find_by_account_identity(
         &self,
         account_id: Uuid,
-        identity_id: Uuid,
-    ) -> anyhow::Result<Option<AccountIdentity>> {
+        organization_id: Uuid,
+    ) -> anyhow::Result<Option<Identity>> {
         self.identity_service
-            .select_by_account_identity(account_id, identity_id)
+            .select_by_organization_account(organization_id, account_id)
             .await
     }
 

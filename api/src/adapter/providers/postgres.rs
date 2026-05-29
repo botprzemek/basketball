@@ -14,7 +14,6 @@
     impl PostgresProvider {
         pub async fn new(config: &impl DatabaseConfig) -> anyhow::Result<Self> {
             let url = config.get_database_url();
-
             let connection_manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(url);
             let pool = Pool::builder()
                 .max_size(10)

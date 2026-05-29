@@ -9,12 +9,12 @@ use axum_extra::extract::{
     CookieJar,
     cookie::{Cookie, SameSite},
 };
-use serde::Deserialize;
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use std::{ptr::read, sync::Arc};
 use time::Duration;
 use uuid::Uuid;
 
-use crate::adapter::{Services, services::AuthenticationState};
+use crate::{adapter::{Services, services::AuthenticationState}, domain::entities::{Identity, Organization}};
 
 pub struct AuthenticationHandler;
 
@@ -40,13 +40,19 @@ pub struct IdentifyRequest {
     pub identity_id: Uuid,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserIdentityResponse {
+    pub identity: Identity,
+    pub organization: Organization,
+}
+
 impl AuthenticationHandler {
     fn create_auth_cookie<'a>(name: &'a str, value: String, max_age_seconds: i64) -> Cookie<'a> {
         Cookie::build((name, value))
             .path("/")
             .http_only(true)
             .same_site(SameSite::Lax)
-            .secure(true)
             .max_age(Duration::seconds(max_age_seconds))
             .build()
     }
@@ -55,6 +61,7 @@ impl AuthenticationHandler {
         Cookie::build((name, ""))
             .path("/")
             .http_only(true)
+            .same_site(SameSite::Lax)
             .max_age(Duration::ZERO)
             .build()
     }
@@ -64,7 +71,7 @@ impl AuthenticationHandler {
     }
 
     fn invoke_access_token<'a>(token: String) -> Cookie<'a> {
-        Self::create_auth_cookie("access-token", token, 3600)
+        Self::create_auth_cookie("access-token", token, 300)
     }
 
     fn invoke_refresh_token<'a>(token: String) -> Cookie<'a> {
@@ -167,13 +174,21 @@ impl AuthenticationHandler {
             }
         };
 
-        match services.actor().identities(token).await {
-            Ok(identities) => (cookies, (StatusCode::OK, Json(identities)).into_response()),
-            Err(_) => (
+        let identities = match services.actor().identities(token).await {
+            Ok(identities) => identities,
+            Err(_) => return (
                 Self::revoke_all_auth_cookies(cookies),
                 StatusCode::UNAUTHORIZED.into_response(),
             ),
-        }
+        };
+
+        
+        let identities = identities
+            .into_iter()
+            .map(|(identity, organization)| UserIdentityResponse { identity, organization })
+            .collect::<Vec<_>>();
+
+        (cookies, (StatusCode::OK, Json(identities)).into_response())
     }
 
     async fn identify(

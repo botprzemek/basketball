@@ -4,7 +4,7 @@ use crate::adapter::{
     config::DatabaseConfig,
     providers::PostgresProvider,
     repositories::{
-        AccountRepository, OrganizationRepository, IdentityRepository, MemberRepository
+        AccountRepository, OrganizationRepository, IdentityRepository
     },
 };
 
@@ -12,7 +12,6 @@ pub struct Registry {
     pub account_repository: AccountRepository,
     pub organization_repository: OrganizationRepository,
     pub identity_repository: IdentityRepository,
-    pub member_repository: MemberRepository,
 }
 
 impl Registry {
@@ -20,10 +19,9 @@ impl Registry {
         let provider = Arc::new(PostgresProvider::new(config).await?);
 
         Ok(Self {
-            account_repository: AccountRepository::new(provider),
-            organization_repository: OrganizationRepository::new(provider),
-            identity_repository: IdentityRepository::new(provider),
-            member_repository: MemberRepository::new(provider),
+            account_repository: AccountRepository::new(provider.clone()),
+            organization_repository: OrganizationRepository::new(provider.clone()),
+            identity_repository: IdentityRepository::new(provider.clone()),
         })
     }
 }

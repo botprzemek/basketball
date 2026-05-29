@@ -1,10 +1,19 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use diesel::{
+    prelude::*,
+};
+use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
+use crate::{adapter::{
+    providers::PostgresProvider,
+    repositories::{identities::{self, dsl::*}, organization::OrganizationRow, organizations},
+}, domain::entities::Organization};
 use crate::domain::{
-    entities::{AccountIdentity, Identity},
+    entities::Identity,
     ports::IdentityPort,
 };
 
@@ -13,281 +22,134 @@ pub struct IdentityRepository {
     provider: Arc<PostgresProvider>,
 }
 
-impl From<&Row> for Identity {
-    fn from(row: &Row) -> Self {
+#[derive(Debug, Clone, Queryable, Selectable, Insertable, Identifiable, AsChangeset)]
+#[diesel(table_name = crate::adapter::repositories::identities)]
+#[diesel(check_for_backend(diesel::pg::Pg))] 
+pub struct IdentityRow {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub account_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+impl From<IdentityRow> for Identity {
+    fn from(identity: IdentityRow) -> Self {
         Self {
-            id: row.get("id"),
-            organization_id: row.get("organization_id"),
-            account_id: row.get("account_id"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
+            id: identity.id,
+            organization_id: identity.organization_id,
+            account_id: identity.account_id,
+            created_at: identity.created_at,
+            updated_at: identity.updated_at,
         }
     }
 }
 
-impl From<&Row> for AccountIdentity {
-    fn from(row: &Row) -> Self {
+impl From<Identity> for IdentityRow {
+    fn from(identity: Identity) -> Self {
         Self {
-            identity_id: row.get("identity_id"),
-            organization_id: row.get("organization_id"),
-            organization_name: row.get("organization_name"),
-            organization_slug: row.get("organization_slug"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
+            id: identity.id,
+            organization_id: identity.organization_id,
+            account_id: identity.account_id,
+            created_at: identity.created_at,
+            updated_at: identity.updated_at,
         }
     }
 }
 
 impl IdentityRepository {
-    pub async fn new(client: Arc<Client>) -> anyhow::Result<Self> {
-        client.batch_execute("
-            CREATE TABLE IF NOT EXISTS basketball.identities (
-                id UUID PRIMARY KEY,
-                organization_id UUID NOT NULL REFERENCES basketball.organizations(id) ON DELETE CASCADE,
-                account_id UUID NOT NULL REFERENCES basketball.accounts(id) ON DELETE CASCADE,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ,
-                UNIQUE(organization_id, account_id)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_identities_organization_id ON basketball.identities(organization_id);
-            CREATE INDEX IF NOT EXISTS idx_identities_account_id ON basketball.identities(account_id);
-            CREATE INDEX IF NOT EXISTS idx_identities_created_at ON basketball.identities(created_at DESC);
-        ")
-            .await?;
-
-        let select = client
-            .prepare_typed(
-                "
-                SELECT
-                    id,
-                    organization_id,
-                    account_id,
-                    created_at,
-                    updated_at
-                FROM basketball.identities
-            ",
-                &[],
-            )
-            .await?;
-
-        let select_by_self = client
-            .prepare_typed(
-                "
-                SELECT
-                    id,
-                    organization_id,
-                    account_id,
-                    created_at,
-                    updated_at
-                FROM basketball.identities
-                WHERE basketball.identities.id = $1
-            ",
-                &[Type::UUID],
-            )
-            .await?;
-
-        let select_by_account = client
-            .prepare_typed(
-                "
-                SELECT
-                    basketball.identities.id AS identity_id,
-                    basketball.identities.organization_id AS organization_id,
-                    basketball.organizations.name AS organization_name,
-                    basketball.organizations.slug AS organization_slug,
-                    basketball.identities.created_at AS created_at,
-                    basketball.identities.updated_at AS updated_at
-                FROM
-                    basketball.identities,
-                    basketball.organizations
-                WHERE basketball.identities.organization_id = basketball.organizations.id
-                AND basketball.identities.account_id = $1
-            ",
-                &[Type::UUID],
-            )
-            .await?;
-
-        let select_by_account_identity = client
-            .prepare_typed(
-                "
-                SELECT
-                    basketball.identities.id AS identity_id,
-                    basketball.identities.organization_id AS organization_id,
-                    basketball.organizations.name AS organization_name,
-                    basketball.organizations.slug AS organization_slug,
-                    basketball.identities.created_at AS created_at,
-                    basketball.identities.updated_at AS updated_at
-                FROM
-                    basketball.identities,
-                    basketball.organizations
-                WHERE basketball.identities.organization_id = basketball.organizations.id
-                AND basketball.identities.account_id = $1
-                AND basketball.identities.id = $2
-            ",
-                &[Type::UUID, Type::UUID],
-            )
-            .await?;
-
-        let insert = client
-            .prepare_typed(
-                "
-                INSERT INTO basketball.identities (
-                    id,
-                    organization_id,
-                    account_id,
-                    created_at,
-                    updated_at
-                )
-                VALUES (
-                    $1,
-                    $2,
-                    $3,
-                    $4,
-                    $5
-                )
-            ",
-                &[
-                    Type::UUID,
-                    Type::UUID,
-                    Type::UUID,
-                    Type::TIMESTAMPTZ,
-                    Type::TIMESTAMPTZ,
-                ],
-            )
-            .await?;
-
-        let update = client
-            .prepare_typed(
-                "
-                UPDATE basketball.identities
-                SET (
-                    organization_id,
-                    account_id,
-                    updated_at
-                ) = (
-                    $1,
-                    $2,
-                    $3
-                )
-            ",
-                &[Type::UUID, Type::UUID, Type::TIMESTAMPTZ],
-            )
-            .await?;
-
-        let delete = client
-            .prepare_typed(
-                "
-                DELETE
-                FROM basketball.identities
-                WHERE basketball.identities.id = $1
-            ",
-                &[Type::UUID],
-            )
-            .await?;
-
-        Ok(Self {
-            client,
-            select,
-            select_by_self,
-            select_by_account,
-            select_by_account_identity,
-            insert,
-            update,
-            delete,
-        })
+    pub fn new(provider: Arc<PostgresProvider>) -> Self {
+        Self {
+            provider,
+        }
     }
 }
 
 #[async_trait]
 impl IdentityPort for IdentityRepository {
     async fn select(&self) -> anyhow::Result<Vec<Identity>> {
-        let result = self
-            .client
-            .query(&self.select.clone(), &[])
+        let connection = &mut self.provider.get().await?;
+        let results = identities
+            .select(IdentityRow::as_select())
+            .get_results::<IdentityRow>(connection)
             .await?
-            .iter()
+            .into_iter()
             .map(Identity::from)
-            .collect::<Vec<Identity>>();
+            .collect::<Vec<_>>();
+
+        Ok(results)
+    }
+
+    async fn select_by_self(&self, self_id: Uuid) -> anyhow::Result<Option<Identity>> {
+        let connection = &mut self.provider.get().await?;
+        let result = identities
+            .select(IdentityRow::as_select())
+            .filter(id.eq(self_id))
+            .first(connection)
+            .await
+            .optional()?
+            .map(Identity::from);
 
         Ok(result)
     }
+    
+    async fn select_by_account(&self, self_account_id: Uuid) -> anyhow::Result<Vec<(Identity, Organization)>> {
+        let connection = &mut self.provider.get().await?;
 
-    async fn select_by_self(&self, id: Uuid) -> anyhow::Result<Option<Identity>> {
-        let result = self
-            .client
-            .query(&self.select_by_self.clone(), &[&id])
+        let results = identities::table
+            .inner_join(organizations::table)
+            .filter(identities::account_id.eq(self_account_id))
+            .select((IdentityRow::as_select(), OrganizationRow::as_select()))
+            .get_results::<(IdentityRow, OrganizationRow)>(connection)
             .await?
-            .first()
+            .into_iter()
+            .map(|(identity, organization)| (Identity::from(identity), Organization::from(organization)))
+            .collect::<Vec<_>>();
+
+        Ok(results)
+    }
+    
+    async fn select_by_organization_account(
+        &self,
+        self_organization_id: Uuid,
+        self_account_id: Uuid,
+    ) -> anyhow::Result<Option<Identity>> {
+        let connection = &mut self.provider.get().await?;
+        let result = identities
+            .select(IdentityRow::as_select())
+            .filter(organization_id.eq(self_organization_id))
+            .filter(account_id.eq(self_account_id))
+            .first(connection)
+            .await
+            .optional()?
             .map(Identity::from);
 
         Ok(result)
     }
 
-    async fn select_by_account(&self, account_id: Uuid) -> anyhow::Result<Vec<AccountIdentity>> {
-        let result = self
-            .client
-            .query(&self.select_by_account.clone(), &[&account_id])
-            .await?
-            .iter()
-            .map(AccountIdentity::from)
-            .collect::<Vec<AccountIdentity>>();
-
-        Ok(result)
-    }
-
-    async fn select_by_account_identity(
-        &self,
-        account_id: Uuid,
-        identity_id: Uuid,
-    ) -> anyhow::Result<Option<AccountIdentity>> {
-        let result = self
-            .client
-            .query(
-                &self.select_by_account_identity.clone(),
-                &[&account_id, &identity_id],
-            )
-            .await?
-            .first()
-            .map(AccountIdentity::from);
-
-        Ok(result)
-    }
-
     async fn insert(&self, identity: Identity) -> anyhow::Result<Identity> {
-        self.client
-            .execute(
-                &self.insert.clone(),
-                &[
-                    &identity.id,
-                    &identity.organization_id,
-                    &identity.account_id,
-                    &identity.created_at,
-                    &identity.updated_at,
-                ],
-            )
-            .await?;
+        let connection = &mut self.provider.get().await?;
+        let result = diesel::insert_into(identities)
+            .values(IdentityRow::from(identity))
+            .get_result::<IdentityRow>(connection)
+            .await
+            .map(Identity::from)?;
 
-        Ok(identity)
+        Ok(result)
     }
 
     async fn update(&self, identity: Identity) -> anyhow::Result<Identity> {
-        self.client
-            .execute(
-                &self.update.clone(),
-                &[
-                    &identity.organization_id,
-                    &identity.account_id,
-                    &identity.updated_at,
-                ],
-            )
-            .await?;
+        let _connection = &mut self.provider.get().await?;
 
         Ok(identity)
     }
 
-    async fn delete(&self, id: Uuid) -> anyhow::Result<()> {
-        self.client.execute(&self.delete.clone(), &[&id]).await?;
-
+    async fn delete(&self, self_id: Uuid) -> anyhow::Result<()> {
+        let connection = &mut self.provider.get().await?;
+        let _result = diesel::delete(
+            identities.filter(id.eq(self_id))
+        ).execute(connection).await?;
+        
         Ok(())
     }
 }

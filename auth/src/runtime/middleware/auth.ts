@@ -1,9 +1,15 @@
 import { defineNuxtRouteMiddleware, navigateTo, useAuth } from "#imports";
 
-export default defineNuxtRouteMiddleware((_to, _from) => {
-    const auth = useAuth();
+export default defineNuxtRouteMiddleware(async (_to, _from) => {
+    const { isAuthenticated, restore } = useAuth();
 
-    if (!auth.isAuthenticated.value) {
+    if (isAuthenticated.value) {
+        return;
+    }
+
+    await restore();
+
+    if (!isAuthenticated.value) {
         return navigateTo("/");
     }
 });

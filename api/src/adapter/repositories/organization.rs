@@ -10,23 +10,12 @@ use uuid::Uuid;
 
 use crate::adapter::{
     providers::PostgresProvider,
-    repositories::schema::organizations::dsl::*,
+    repositories::organizations::dsl::*,
 };
 use crate::domain::{
     entities::Organization,
     ports::OrganizationPort,
 };
-
-diesel::table! {
-    basketball.organizations (id) {
-        id -> Uuid,
-        name -> Text,
-        slug -> Text,
-        is_active -> Bool,
-        created_at -> Timestamptz,
-        updated_at -> Nullable<Timestamptz>,
-    }
-}
 
 #[derive(Clone)]
 pub struct OrganizationRepository {
@@ -34,7 +23,7 @@ pub struct OrganizationRepository {
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Insertable, Identifiable, AsChangeset)]
-#[diesel(table_name = crate::adapter::repositories::schema::organizations)]
+#[diesel(table_name = crate::adapter::repositories::organizations)]
 #[diesel(check_for_backend(diesel::pg::Pg))] 
 pub struct OrganizationRow {
     pub id: Uuid,
@@ -85,11 +74,11 @@ impl OrganizationPort for OrganizationRepository {
         let connection = &mut self.provider.get().await?;
         let results = organizations
             .select(OrganizationRow::as_select())
-            .get_results::<OrganizationRow>(&mut connection)
+            .get_results::<OrganizationRow>(connection)
             .await?
             .into_iter()
             .map(Organization::from)
-            .collect();
+            .collect::<Vec<_>>();
 
         Ok(results)
     }
@@ -109,26 +98,17 @@ impl OrganizationPort for OrganizationRepository {
 
     async fn insert(&self, organization: Organization) -> anyhow::Result<Organization> {
         let connection = &mut self.provider.get().await?;
-        let result = organizations
-            .select(OrganizationRow::as_select())
-            .load::<OrganizationRow>(&mut connection)
-            .await?
-            .into_iter()
-            .map(Organization::from)
-            .collect();
+        let result = diesel::insert_into(organizations)
+            .values(OrganizationRow::from(organization))
+            .get_result::<OrganizationRow>(connection)
+            .await
+            .map(Organization::from)?;
 
-        Ok(organization)
+        Ok(result)
     }
 
     async fn update(&self, organization: Organization) -> anyhow::Result<Organization> {
-        let connection = &mut self.provider.get().await?;
-        let result = organizations
-            .select(OrganizationRow::as_select())
-            .load::<OrganizationRow>(connection)
-            .await?
-            .into_iter()
-            .map(Organization::from)
-            .collect();
+        let _connection = &mut self.provider.get().await?;
 
         Ok(organization)
     }

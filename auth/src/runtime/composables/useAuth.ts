@@ -1,49 +1,52 @@
 import {
     clearNuxtState,
     computed,
-    useFetch,
+    useAPI,
     useNuxtApp,
+    useRequestHeaders,
     useState,
 } from "#imports";
 
 export const useAuth = () => {
-    const nuxtApp = useNuxtApp();
+    const { $api, callHook } = useNuxtApp();
     const session = useState<any | null>("auth_session", () => null);
 
     const isAuthenticated = computed(() => !!session.value);
 
     const login = async (email: string, password: string) => {
-        try {
-            const data = await $fetch("/api/auth/login", {
-                method: "POST",
-                body: { email, password },
-            });
+        await $api("/auth/login", {
+            method: "POST",
+            credentials: "include",
+            body: { email, password },
+        });
 
-            session.value = data;
+        session.value = await $api("/auth/me", {
+            method: "GET",
+            credentials: "include",
+        });
 
-            await nuxtApp.callHook("auth:login", "/auth");
-        } catch (error) {
-            console.error("Login failed", error);
-            return { success: false, error };
-        }
+        await callHook("auth:login", "/auth");
     };
 
     const restore = async () => {
-        const { data } = await useFetch("/api/auth/me", {
+        const { data } = await useAPI("/auth/me", {
             method: "GET",
+            credentials: "include",
+            headers: useRequestHeaders(["cookie"]),
         });
 
         session.value = data.value;
     };
 
     const logout = async () => {
-        await $fetch("/api/auth/logout", {
+        await $api("/auth/logout", {
             method: "POST",
+            credentials: "include",
         });
 
         clearNuxtState("auth_session");
 
-        await nuxtApp.callHook("auth:logout", "/");
+        await callHook("auth:logout", "/");
     };
 
     return {

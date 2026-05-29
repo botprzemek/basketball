@@ -25,14 +25,16 @@ services:
   database-1:
     <<: *db-common
     container_name: basketball-database-1
-    command: start --insecure --advertise-addr=basketball-database-1 --sql-addr=:26357 --join=basketball-database-1,basketball-database-2,basketball-database-3
+    command: start --insecure --http-addr=basketball-database-1:8080 --listen-addr=basketball-database-1:26357 --advertise-addr=basketball-database-1:26357 --sql-addr=basketball-database-1:26257 --join=basketball-database-1:26357,basketball-database-2:26357,basketball-database-3:26357
     volumes:
       - database-1:/cockroach/cockroach-data
+    ports:
+      - "0.0.0.0:8080:8080"
 
   database-2:
     <<: *db-common
     container_name: basketball-database-2
-    command: start --insecure --advertise-addr=basketball-database-2 --sql-addr=:26357 --join=basketball-database-1,basketball-database-2,basketball-database-3
+    command: start --insecure --http-addr=basketball-database-2:8080 --listen-addr=basketball-database-2:26357 --advertise-addr=basketball-database-2:26357 --sql-addr=basketball-database-2:26257 --join=basketball-database-1:26357,basketball-database-2:26357,basketball-database-3:26357
     volumes:
       - database-2:/cockroach/cockroach-data
     depends_on:
@@ -42,7 +44,7 @@ services:
   database-3:
     <<: *db-common
     container_name: basketball-database-3
-    command: start --insecure --advertise-addr=basketball-database-3 --sql-addr=:26357 --join=basketball-database-1,basketball-database-2,basketball-database-3
+    command: start --insecure --http-addr=basketball-database-3:8080 --listen-addr=basketball-database-3:26357 --advertise-addr=basketball-database-3:26357 --sql-addr=basketball-database-3:26257 --join=basketball-database-1:26357,basketball-database-2:26357,basketball-database-3:26357
     volumes:
       - database-3:/cockroach/cockroach-data
     depends_on:
@@ -51,12 +53,25 @@ services:
 
   init-cluster:
     image: "cockroachdb/cockroach:latest-v26.1"
-    command: init --insecure --host=basketball-database-1
+    container_name: basketball-database-init
+    command: init --insecure --host=basketball-database-1:26257
     networks:
       basketball:
     depends_on:
       database-1:
         condition: service_started
+
+  migrate-cluster:
+    image: "cockroachdb/cockroach:latest-v26.1"
+    container_name: basketball-database-migrate
+    command: sql --insecure --host=basketball-database-1:26257 --file "/cockroach/migrations.sql"
+    networks:
+      basketball:
+    depends_on:
+      database-1:
+        condition: service_started
+    volumes:
+      - "./cockroach/migrations.sql:/cockroach/migrations.sql"
 
   cache:
     image: valkey/valkey:9.0-alpine

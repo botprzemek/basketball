@@ -1,6 +1,10 @@
-use axum::Router;
+use axum::{
+    Router,
+    http::{header, Method},
+};
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 
 use crate::adapter::{
     Services,
@@ -84,6 +88,18 @@ impl Gateway {
         let routes_v1 = Router::new();
 
         self.router = self.router.nest("/api/v1/system", routes_v1);
+
+        self
+    }
+
+    pub fn with_cors(mut self) -> Self {
+        let cors = CorsLayer::new()
+            .allow_origin("http://localhost:3001".parse::<axum::http::HeaderValue>().unwrap())
+            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+            .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
+            .allow_credentials(true);
+
+        self.router = self.router.layer(cors);
 
         self
     }

@@ -3,7 +3,6 @@ import {
     defineNuxtModule,
     createResolver,
     addImportsDir,
-    addServerHandler,
     addPlugin,
     addRouteMiddleware,
 } from "@nuxt/kit";
@@ -30,18 +29,7 @@ export default defineNuxtModule<ModuleOptions>({
         //     resolver.resolve(runtime, "assets/css/main.css"),
         // );
 
-        addServerHandler({
-            route: "/api/auth/login",
-            handler: resolver.resolve(runtime, "server/api/auth/login.post"),
-        });
-        addServerHandler({
-            route: "/api/auth/me",
-            handler: resolver.resolve(runtime, "server/api/auth/me.get"),
-        });
-        addServerHandler({
-            route: "/api/auth/logout",
-            handler: resolver.resolve(runtime, "server/api/auth/logout.post"),
-        });
+        addPlugin(resolver.resolve(runtime, "plugins/api"));
 
         addImportsDir(resolver.resolve(runtime, "composables"));
 
