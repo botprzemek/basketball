@@ -6,7 +6,6 @@ pub struct IdentitySelectionActor {
 
 pub struct AuthenticatedActor {
     pub account_id: Uuid,
-    pub identity_id: Uuid,
     pub organization_id: Uuid,
 }
 

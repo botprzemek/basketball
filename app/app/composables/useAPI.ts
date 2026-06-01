@@ -1,13 +1,10 @@
 import type { UseFetchOptions } from "nuxt/app";
 
-import { useFetch, useNuxtApp } from "#imports";
-
-export function useAPI<T>(
+export const useAPI = <T>(
     url: string | (() => string),
     options: UseFetchOptions<T> = {},
-) {
-    return useFetch(url, {
+) =>
+    useFetch(url, {
         ...options,
         $fetch: useNuxtApp().$api,
     });
-}

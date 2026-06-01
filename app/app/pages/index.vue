@@ -1,17 +1,16 @@
 <script setup lang="ts">
-definePageMeta({ middleware: ["auth-access"] });
+definePageMeta({ middleware: ["auth-context"] });
 
-const auth = useAuth();
-const organization = useOrganization();
-
-const details = await organization.getDetails();
-const members = await organization.getMembers();
+const { organization, roles } = await useOrganization();
 </script>
 
 <template>
-  <main>
-    <button @click.prevent="auth.logout()">Logout</button>
-    {{ details }}
-    {{ members }}
-  </main>
+    <main>
+        <h1>{{ organization.slug }}</h1>
+        <p>{{ organization.name }}</p>
+        <div>
+            Roles
+            <p v-for="role in roles">{{ role }}</p>
+        </div>
+    </main>
 </template>

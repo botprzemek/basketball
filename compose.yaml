@@ -1,40 +1,36 @@
 networks:
-  basketball:
-    name: basketball
+  auth:
+    name: auth
     driver: bridge
 
 volumes:
   database-1:
-    name: basketball-database-1
+    name: auth-database-1
   database-2:
-    name: basketball-database-2
+    name: auth-database-2
   database-3:
-    name: basketball-database-3
+    name: auth-database-3
   cache:
-    name: basketball-cache
-  grafana:
-    name: basketball-grafana
+    name: auth-cache
 
 x-db-common: &db-common
   image: "cockroachdb/cockroach:latest-v26.1"
   restart: always
   networks:
-    basketball:
+    auth:
 
 services:
   database-1:
     <<: *db-common
-    container_name: basketball-database-1
-    command: start --insecure --http-addr=basketball-database-1:8080 --listen-addr=basketball-database-1:26357 --advertise-addr=basketball-database-1:26357 --sql-addr=basketball-database-1:26257 --join=basketball-database-1:26357,basketball-database-2:26357,basketball-database-3:26357
+    container_name: auth-database-1
+    command: start --insecure --http-addr=auth-database-1:8080 --listen-addr=auth-database-1:26357 --advertise-addr=auth-database-1:26357 --sql-addr=auth-database-1:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
     volumes:
       - database-1:/cockroach/cockroach-data
-    ports:
-      - "0.0.0.0:8080:8080"
 
   database-2:
     <<: *db-common
-    container_name: basketball-database-2
-    command: start --insecure --http-addr=basketball-database-2:8080 --listen-addr=basketball-database-2:26357 --advertise-addr=basketball-database-2:26357 --sql-addr=basketball-database-2:26257 --join=basketball-database-1:26357,basketball-database-2:26357,basketball-database-3:26357
+    container_name: auth-database-2
+    command: start --insecure --http-addr=auth-database-2:8080 --listen-addr=auth-database-2:26357 --advertise-addr=auth-database-2:26357 --sql-addr=auth-database-2:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
     volumes:
       - database-2:/cockroach/cockroach-data
     depends_on:
@@ -43,8 +39,8 @@ services:
 
   database-3:
     <<: *db-common
-    container_name: basketball-database-3
-    command: start --insecure --http-addr=basketball-database-3:8080 --listen-addr=basketball-database-3:26357 --advertise-addr=basketball-database-3:26357 --sql-addr=basketball-database-3:26257 --join=basketball-database-1:26357,basketball-database-2:26357,basketball-database-3:26357
+    container_name: auth-database-3
+    command: start --insecure --http-addr=auth-database-3:8080 --listen-addr=auth-database-3:26357 --advertise-addr=auth-database-3:26357 --sql-addr=auth-database-3:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
     volumes:
       - database-3:/cockroach/cockroach-data
     depends_on:
@@ -53,32 +49,44 @@ services:
 
   init-cluster:
     image: "cockroachdb/cockroach:latest-v26.1"
-    container_name: basketball-database-init
-    command: init --insecure --host=basketball-database-1:26257
+    container_name: auth-database-init
+    command: init --insecure --host=auth-database-1:26357
     networks:
-      basketball:
+      auth:
     depends_on:
       database-1:
         condition: service_started
 
   migrate-cluster:
     image: "cockroachdb/cockroach:latest-v26.1"
-    container_name: basketball-database-migrate
-    command: sql --insecure --host=basketball-database-1:26257 --file "/cockroach/migrations.sql"
+    container_name: auth-database-migrate
+    command: sql --insecure --host=auth-database-1:26257 --file "/cockroach/migrations.sql"
     networks:
-      basketball:
+      auth:
     depends_on:
       database-1:
         condition: service_started
     volumes:
       - "./cockroach/migrations.sql:/cockroach/migrations.sql"
 
+  seed-cluster:
+    image: "cockroachdb/cockroach:latest-v26.1"
+    container_name: auth-database-seed
+    command: sql --insecure --host=auth-database-1:26257 --file "/cockroach/seeding.sql"
+    networks:
+      auth:
+    depends_on:
+      database-1:
+        condition: service_started
+    volumes:
+      - "./cockroach/seeding.sql:/cockroach/seeding.sql"
+
   cache:
     image: valkey/valkey:9.0-alpine
-    container_name: basketball-cache
+    container_name: auth-cache
     entrypoint: valkey-server --appendonly yes --save 60 1
     networks:
-      basketball:
+      auth:
     healthcheck:
       test: ["CMD", "valkey-cli", "-h", "127.0.0.1", "-p", "6379", "PING"]
       interval: 1m30s
@@ -89,36 +97,37 @@ services:
       - cache:/data
 
   api:
-    image: basketball/api:0.1.0
+    image: auth/api:0.1.0
     build: ./api
-    container_name: basketball-api
+    container_name: auth-api
     networks:
-      basketball:
+      auth:
     depends_on:
       init-cluster:
         condition: service_completed_successfully
       cache:
         condition: service_started
+    environment:
+      API_SERVER_HOST: 0.0.0.0
+      API_SERVER_PORT: 3000
+      API_DATABASE_HOST: auth-database-1
+      API_DATABASE_PORT: 26257
+      API_DATABASE_NAME: dev
+      API_CACHE_HOST: auth-cache
+      API_CACHE_PORT: 6379
 
   app:
-    image: basketball/app:0.1.0
+    image: auth/app:0.1.0
     build: ./app
-    container_name: basketball-app
-    environment:
-      NUXT_APP_BASE_URL: "/app/"
-      NUXT_API_URL: "http://basketball-api:3000"
+    container_name: auth-app
     networks:
-      basketball:
+      auth:
     depends_on:
       api:
         condition: service_started
+    environment:
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3001
 
-  proxy:
-    image: nginx:1.29-alpine
-    container_name: basketball-nginx
-    networks:
-      basketball:
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-    ports:
-      - "80:80"
+      NUXT_APP_BASE_URL: /
+      NUXT_API_URL: http://auth-api:3000

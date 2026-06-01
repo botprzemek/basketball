@@ -1,22 +1,20 @@
-export const useOrganization = () => {
-  const getDetails = async () => {
-    const { data: organization } = await useFetch("/api/organization", {
-      key: "organization",
-    });
+export const useOrganization = async () => {
+    const { context } = useAuth();
+    const { data: organization } = await useAPI(
+        `/organizations/${context.value.organizationId}`,
+        {
+            key: "context_organization",
+        },
+    );
+    const { data: roles } = await useAPI(
+        `/organizations/${context.value.organizationId}/roles`,
+        {
+            key: "context_organization_roles",
+        },
+    );
 
-    return organization;
-  };
-
-  const getMembers = async () => {
-    const { data: members } = await useFetch("/api/organization/members", {
-      key: "organization-members",
-    });
-
-    return members;
-  };
-
-  return {
-    getDetails,
-    getMembers,
-  };
+    return {
+        organization,
+        roles,
+    };
 };

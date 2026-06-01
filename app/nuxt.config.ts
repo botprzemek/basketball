@@ -2,26 +2,23 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
     compatibilityDate: "2025-07-15",
-    devtools: { enabled: true },
-    devServer: {
-        host: "0.0.0.0",
-        port: 3002,
+    devtools: {
+        enabled: true,
+        timeline: {
+            enabled: true,
+        },
     },
 
     modules: ["@nuxt/fonts"],
 
     nitro: {
         runtimeConfig: {
-            envPrefix: "BASKETBALL_",
+            envPrefix: "AUTH_",
         },
     },
 
-    app: {
-        baseURL: "/app/",
-    },
-
     runtimeConfig: {
-        apiHost: "http://localhost:3000/api/v1",
+        apiHost: "",
         tokens: {
             identity: "identity-token",
             access: "access-token",

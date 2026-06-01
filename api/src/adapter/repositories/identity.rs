@@ -2,19 +2,21 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use diesel::{
-    prelude::*,
-};
+use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::{adapter::{
-    providers::PostgresProvider,
-    repositories::{identities::{self, dsl::*}, organization::OrganizationRow, organizations},
-}, domain::entities::Organization};
-use crate::domain::{
-    entities::Identity,
-    ports::IdentityPort,
+use crate::domain::{entities::Identity, ports::IdentityPort};
+use crate::{
+    adapter::{
+        providers::PostgresProvider,
+        repositories::{
+            identities::{self, dsl::*},
+            organization::OrganizationRow,
+            organizations,
+        },
+    },
+    domain::entities::Organization,
 };
 
 #[derive(Clone)]
@@ -24,11 +26,11 @@ pub struct IdentityRepository {
 
 #[derive(Debug, Clone, Queryable, Selectable, Insertable, Identifiable, AsChangeset)]
 #[diesel(table_name = crate::adapter::repositories::identities)]
-#[diesel(check_for_backend(diesel::pg::Pg))] 
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(account_id, organization_id))]
 pub struct IdentityRow {
-    pub id: Uuid,
-    pub organization_id: Uuid,
     pub account_id: Uuid,
+    pub organization_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -36,7 +38,6 @@ pub struct IdentityRow {
 impl From<IdentityRow> for Identity {
     fn from(identity: IdentityRow) -> Self {
         Self {
-            id: identity.id,
             organization_id: identity.organization_id,
             account_id: identity.account_id,
             created_at: identity.created_at,
@@ -48,7 +49,6 @@ impl From<IdentityRow> for Identity {
 impl From<Identity> for IdentityRow {
     fn from(identity: Identity) -> Self {
         Self {
-            id: identity.id,
             organization_id: identity.organization_id,
             account_id: identity.account_id,
             created_at: identity.created_at,
@@ -59,9 +59,7 @@ impl From<Identity> for IdentityRow {
 
 impl IdentityRepository {
     pub fn new(provider: Arc<PostgresProvider>) -> Self {
-        Self {
-            provider,
-        }
+        Self { provider }
     }
 }
 
@@ -80,20 +78,10 @@ impl IdentityPort for IdentityRepository {
         Ok(results)
     }
 
-    async fn select_by_self(&self, self_id: Uuid) -> anyhow::Result<Option<Identity>> {
-        let connection = &mut self.provider.get().await?;
-        let result = identities
-            .select(IdentityRow::as_select())
-            .filter(id.eq(self_id))
-            .first(connection)
-            .await
-            .optional()?
-            .map(Identity::from);
-
-        Ok(result)
-    }
-    
-    async fn select_by_account(&self, self_account_id: Uuid) -> anyhow::Result<Vec<(Identity, Organization)>> {
+    async fn select_by_account(
+        &self,
+        self_account_id: Uuid,
+    ) -> anyhow::Result<Vec<(Identity, Organization)>> {
         let connection = &mut self.provider.get().await?;
 
         let results = identities::table
@@ -103,16 +91,18 @@ impl IdentityPort for IdentityRepository {
             .get_results::<(IdentityRow, OrganizationRow)>(connection)
             .await?
             .into_iter()
-            .map(|(identity, organization)| (Identity::from(identity), Organization::from(organization)))
+            .map(|(identity, organization)| {
+                (Identity::from(identity), Organization::from(organization))
+            })
             .collect::<Vec<_>>();
 
         Ok(results)
     }
-    
-    async fn select_by_organization_account(
+
+    async fn select_by_self(
         &self,
-        self_organization_id: Uuid,
         self_account_id: Uuid,
+        self_organization_id: Uuid,
     ) -> anyhow::Result<Option<Identity>> {
         let connection = &mut self.provider.get().await?;
         let result = identities
@@ -138,18 +128,20 @@ impl IdentityPort for IdentityRepository {
         Ok(result)
     }
 
-    async fn update(&self, identity: Identity) -> anyhow::Result<Identity> {
-        let _connection = &mut self.provider.get().await?;
-
-        Ok(identity)
-    }
-
-    async fn delete(&self, self_id: Uuid) -> anyhow::Result<()> {
+    async fn delete(
+        &self,
+        self_account_id: Uuid,
+        self_organization_id: Uuid,
+    ) -> anyhow::Result<()> {
         let connection = &mut self.provider.get().await?;
         let _result = diesel::delete(
-            identities.filter(id.eq(self_id))
-        ).execute(connection).await?;
-        
+            identities
+                .filter(organization_id.eq(self_organization_id))
+                .filter(account_id.eq(self_account_id)),
+        )
+        .execute(connection)
+        .await?;
+
         Ok(())
     }
 }

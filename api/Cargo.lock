@@ -64,6 +64,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "auth_api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "async-trait",
+ "axum",
+ "axum-extra",
+ "bb8",
+ "chrono",
+ "diesel",
+ "diesel-async",
+ "futures",
+ "http-body-util",
+ "jsonwebtoken",
+ "redis",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "tower-http",
+ "uuid",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -160,31 +185,6 @@ name = "base64ct"
 version = "1.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
-
-[[package]]
-name = "basketball_api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "argon2",
- "async-trait",
- "axum",
- "axum-extra",
- "bb8",
- "chrono",
- "diesel",
- "diesel-async",
- "futures",
- "http-body-util",
- "jsonwebtoken",
- "redis",
- "serde",
- "serde_json",
- "time",
- "tokio",
- "tower-http",
- "uuid",
-]
 
 [[package]]
 name = "bb8"

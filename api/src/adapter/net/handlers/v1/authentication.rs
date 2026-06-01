@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     Json, Router,
     extract::State,
@@ -9,12 +11,15 @@ use axum_extra::extract::{
     CookieJar,
     cookie::{Cookie, SameSite},
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::{ptr::read, sync::Arc};
 use time::Duration;
 use uuid::Uuid;
 
-use crate::{adapter::{Services, services::AuthenticationState}, domain::entities::{Identity, Organization}};
+use crate::{
+    adapter::{Services, services::AuthenticationState},
+    domain::entities::Organization,
+};
 
 pub struct AuthenticationHandler;
 
@@ -36,15 +41,40 @@ pub struct LoginRequest {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct IdentifyRequest {
-    pub identity_id: Uuid,
+pub struct SelectContextRequest {
+    pub organization_id: Uuid,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct UserIdentityResponse {
-    pub identity: Identity,
-    pub organization: Organization,
+pub struct ContextResponse {
+    pub organization: OrganizationResponse,
+    pub joined_at: DateTime<Utc>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentContextResponse {
+    pub account_id: Uuid,
+    pub organization_id: Uuid,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrganizationResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+}
+
+impl From<Organization> for OrganizationResponse {
+    fn from(organization: Organization) -> Self {
+        Self {
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+        }
+    }
 }
 
 impl AuthenticationHandler {
@@ -155,46 +185,19 @@ impl AuthenticationHandler {
         cookies: CookieJar,
         Json(LoginRequest { email, password }): Json<LoginRequest>,
     ) -> (CookieJar, impl IntoResponse) {
-        let state = match services.actor().authenticate(email, password).await {
+        let state = match services.actor().login(email, password).await {
             Ok(state) => state,
-            Err(_) => return (cookies, StatusCode::UNAUTHORIZED.into_response()),
+            Err(_) => {
+                return (cookies, StatusCode::UNAUTHORIZED.into_response());
+            }
         };
 
         Self::handle_pending(cookies, state)
     }
 
-    async fn me(State(services): State<Arc<Services>>, cookies: CookieJar) -> impl IntoResponse {
-        let token = match cookies.get("identity-token") {
-            Some(token) => token.value(),
-            None => {
-                return (
-                    Self::revoke_all_auth_cookies(cookies),
-                    StatusCode::UNAUTHORIZED.into_response(),
-                );
-            }
-        };
-
-        let identities = match services.actor().identities(token).await {
-            Ok(identities) => identities,
-            Err(_) => return (
-                Self::revoke_all_auth_cookies(cookies),
-                StatusCode::UNAUTHORIZED.into_response(),
-            ),
-        };
-
-        
-        let identities = identities
-            .into_iter()
-            .map(|(identity, organization)| UserIdentityResponse { identity, organization })
-            .collect::<Vec<_>>();
-
-        (cookies, (StatusCode::OK, Json(identities)).into_response())
-    }
-
-    async fn identify(
+    async fn context(
         State(services): State<Arc<Services>>,
         cookies: CookieJar,
-        Json(payload): Json<IdentifyRequest>,
     ) -> impl IntoResponse {
         let token = match cookies.get("identity-token") {
             Some(token) => token.value(),
@@ -206,7 +209,50 @@ impl AuthenticationHandler {
             }
         };
 
-        let state = match services.actor().identify(payload.identity_id, token).await {
+        let organizations = match services.actor().context(token).await {
+            Ok(identities) => identities,
+            Err(_) => {
+                return (
+                    Self::revoke_all_auth_cookies(cookies),
+                    StatusCode::UNAUTHORIZED.into_response(),
+                );
+            }
+        };
+
+        let organizations = organizations
+            .into_iter()
+            .map(|(identity, organization)| ContextResponse {
+                organization: OrganizationResponse::from(organization),
+                joined_at: identity.created_at,
+            })
+            .collect::<Vec<_>>();
+
+        (
+            cookies,
+            (StatusCode::OK, Json(organizations)).into_response(),
+        )
+    }
+
+    async fn select(
+        State(services): State<Arc<Services>>,
+        cookies: CookieJar,
+        Json(payload): Json<SelectContextRequest>,
+    ) -> impl IntoResponse {
+        let token = match cookies.get("identity-token") {
+            Some(token) => token.value(),
+            None => {
+                return (
+                    Self::revoke_all_auth_cookies(cookies),
+                    StatusCode::UNAUTHORIZED.into_response(),
+                );
+            }
+        };
+
+        let state = match services
+            .actor()
+            .select(token, payload.organization_id)
+            .await
+        {
             Ok(state) => state,
             Err(_) => {
                 return (
@@ -217,6 +263,36 @@ impl AuthenticationHandler {
         };
 
         Self::handle_authenticated(cookies, state)
+    }
+
+    async fn current(
+        State(services): State<Arc<Services>>,
+        cookies: CookieJar,
+    ) -> impl IntoResponse {
+        let token = match cookies.get("access-token") {
+            Some(token) => token.value(),
+            None => {
+                return (
+                    Self::revoke_all_auth_cookies(cookies),
+                    StatusCode::UNAUTHORIZED.into_response(),
+                );
+            }
+        };
+
+        let context = match services.actor().current(token).await {
+            Ok(actor) => CurrentContextResponse {
+                account_id: actor.account_id,
+                organization_id: actor.organization_id,
+            },
+            Err(_) => {
+                return (
+                    Self::revoke_all_auth_cookies(cookies),
+                    StatusCode::UNAUTHORIZED.into_response(),
+                );
+            }
+        };
+
+        (cookies, (StatusCode::OK, Json(context)).into_response())
     }
 
     async fn refresh(
@@ -257,8 +333,9 @@ impl AuthenticationHandler {
         Router::new()
             .route("/register", post(Self::register))
             .route("/login", post(Self::login))
-            .route("/me", get(Self::me))
-            .route("/identify", post(Self::identify))
+            .route("/context", get(Self::context))
+            .route("/context/select", post(Self::select))
+            .route("/context/current", get(Self::current))
             .route("/refresh", post(Self::refresh))
             .route("/logout", post(Self::logout))
             .with_state(services)

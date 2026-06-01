@@ -28,7 +28,6 @@ pub struct AccessClaims {
     pub iat: i64,
     pub jti: Uuid,
     pub auth_version: i32,
-    pub iid: Uuid,
     pub oid: Uuid,
 
     pub roles: Vec<Uuid>,
@@ -44,7 +43,6 @@ pub struct RefreshClaims {
     pub iat: i64,
     pub jti: Uuid,
     pub auth_version: i32,
-    pub iid: Uuid,
     pub oid: Uuid,
 }
 
@@ -103,7 +101,6 @@ impl TokenService {
     pub fn issue_authentication(
         &self,
         account_id: Uuid,
-        identity_id: Uuid,
         organization_id: Uuid,
     ) -> anyhow::Result<AuthenticationState> {
         let access = AccessClaims {
@@ -114,9 +111,8 @@ impl TokenService {
             iat: chrono::Utc::now().timestamp(),
             jti: Uuid::now_v7(),
             auth_version: 1,
-            iid: identity_id,
             oid: organization_id,
-            
+
             roles: vec![],
             permissions: vec![],
         };
@@ -128,7 +124,6 @@ impl TokenService {
             iat: chrono::Utc::now().timestamp(),
             jti: Uuid::now_v7(),
             auth_version: 1,
-            iid: identity_id,
             oid: organization_id,
         };
 
@@ -145,7 +140,6 @@ impl TokenService {
             })),
             Claims::Access(claims) => Ok(Actor::Authorized(AuthenticatedActor {
                 account_id: claims.sub,
-                identity_id: claims.iid,
                 organization_id: claims.oid,
             })),
             _ => Err(anyhow::anyhow!("Invalid authentication token")),
@@ -154,9 +148,7 @@ impl TokenService {
 
     pub fn refresh(&self, token: &str) -> anyhow::Result<AuthenticationState> {
         match self.decode(token)? {
-            Claims::Refresh(claims) => {
-                self.issue_authentication(claims.sub, claims.iid, claims.oid)
-            }
+            Claims::Refresh(claims) => self.issue_authentication(claims.oid, claims.sub),
             _ => Err(anyhow::anyhow!("Invalid refresh token")),
         }
     }

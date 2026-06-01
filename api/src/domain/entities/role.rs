@@ -4,18 +4,20 @@ use uuid::Uuid;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Identity {
-    pub organization_id: Uuid,
-    pub account_id: Uuid,
+pub struct Role {
+    pub id: Uuid,
+    pub name: String,
+    pub description: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-impl Identity {
-    pub fn new(organization_id: Uuid, account_id: Uuid) -> Self {
+impl Role {
+    pub fn new(name: String, description: String) -> Self {
         Self {
-            organization_id,
-            account_id,
+            id: Uuid::now_v7(),
+            name,
+            description,
             created_at: Utc::now(),
             updated_at: None,
         }

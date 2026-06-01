@@ -4,7 +4,7 @@ use crate::adapter::services::{
     AccountService, IdentityService, OrganizationService, PasswordService, TokenService,
     token::AuthenticationState,
 };
-use crate::domain::entities::{Actor, Identity, Organization};
+use crate::domain::entities::{Actor, AuthenticatedActor, Identity, Organization};
 use crate::domain::{applications::CreateAccount, entities::Account};
 
 pub struct ActorService {
@@ -59,7 +59,7 @@ impl ActorService {
         Ok(account)
     }
 
-    pub async fn authenticate(
+    pub async fn login(
         &self,
         email: String,
         password: String,
@@ -79,36 +79,40 @@ impl ActorService {
         }
     }
 
-    pub async fn identities(&self, token: &str) -> anyhow::Result<Vec<(Identity, Organization)>> {
+    pub async fn context(&self, token: &str) -> anyhow::Result<Vec<(Identity, Organization)>> {
         match self.token.authenticate(token)? {
             Actor::Selection(actor) => self.identity.find_by_account(actor.account_id).await,
             Actor::Authorized(_) => Err(anyhow::anyhow!("Already logged in")),
         }
     }
 
-    pub async fn identify(
+    pub async fn select(
         &self,
-        selected_identity: Uuid,
         token: &str,
+        organization_id: Uuid,
     ) -> anyhow::Result<AuthenticationState> {
         match self.token.authenticate(token)? {
             Actor::Selection(actor) => {
                 let identity = match self
                     .identity
-                    .find_by_account_identity(actor.account_id, selected_identity)
+                    .find_by_self(actor.account_id, organization_id)
                     .await?
                 {
                     Some(identity) => identity,
-                    None => return Err(anyhow::anyhow!("Not valid")),
+                    None => return Err(anyhow::anyhow!("Identity not found")),
                 };
 
-                Ok(self.token.issue_authentication(
-                    actor.account_id,
-                    identity.id,
-                    identity.organization_id,
-                )?)
+                self.token
+                    .issue_authentication(identity.account_id, identity.organization_id)
             }
             Actor::Authorized(_) => Err(anyhow::anyhow!("Already logged in")),
+        }
+    }
+
+    pub async fn current(&self, token: &str) -> anyhow::Result<AuthenticatedActor> {
+        match self.token.authenticate(token)? {
+            Actor::Authorized(actor) => Ok(actor),
+            _ => Err(anyhow::anyhow!("Not logged in")),
         }
     }
 

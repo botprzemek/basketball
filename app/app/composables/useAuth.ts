@@ -1,56 +1,62 @@
 export const useAuth = () => {
-  const getIdentities = async () => {
-    const { data: identities } = await useFetch("/api/auth/identities", {
-      key: "auth-identities",
-    });
+    const { $api, callHook } = useNuxtApp();
+    const organizations = useState<any | null>(
+        "auth_organizations",
+        () => null,
+    );
+    const context = useState<any | null>("auth_current", () => null);
 
-    return identities;
-  };
+    const isLogged = computed(() => !!organizations.value);
+    const isAuthenticated = computed(() => !!context.value);
 
-  const register = async (credentials: RegisterCredentials) => {
-    await $fetch("/api/auth/register", {
-      method: "POST",
-      body: credentials,
-    });
+    const login = async (credentials: LoginCredentials) => {
+        await $api("/auth/login", {
+            method: "POST",
+            body: credentials,
+        });
 
-    return navigateTo("/auth/login");
-  };
+        organizations.value = await $api("/auth/context", {
+            method: "GET",
+        });
 
-  const login = async (credentials: LoginCredentials) => {
-    await $fetch("/api/auth/login", {
-      method: "POST",
-      body: credentials,
-    });
+        await callHook("auth:login");
+    };
 
-    return navigateTo("/auth/identify");
-  };
+    const select = async (organization: any) => {
+        await $api("/auth/context/select", {
+            method: "POST",
+            body: {
+                organizationId: organization.id,
+            },
+        });
 
-  const identify = async (identityId: string) => {
-    await $fetch("/api/auth/identify", {
-      method: "POST",
-      body: { identityId },
-    });
+        await callHook("auth:select");
+    };
 
-    clearNuxtData("auth-identities");
+    const current = async () => {
+        try {
+            context.value = await $api("/auth/context/current");
+        } catch {
+            context.value = null;
+        }
+    };
 
-    return navigateTo("/");
-  };
+    const logout = async () => {
+        await callHook("auth:logout");
 
-  const logout = async () => {
-    await $fetch("/api/auth/logout", {
-      method: "POST",
-    });
+        await $api("/auth/logout", {
+            method: "POST",
+        });
+    };
 
-    clearNuxtData("auth-identities");
-
-    return navigateTo("/auth/login");
-  };
-
-  return {
-    getIdentities,
-    register,
-    login,
-    identify,
-    logout,
-  };
+    return {
+        organizations,
+        context,
+        isLogged,
+        isAuthenticated,
+        login,
+        select,
+        current,
+        logout,
+    };
 };

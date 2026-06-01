@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: API
   description: >
-    API for managing basketball statistics, organizations, teams, and user access control.
+    API for managing statistics, organizations, teams, and user access control.
   version: 0.1.0
 
 servers:
@@ -167,7 +167,7 @@ components:
 
     Team:
       type: object
-      description: Basic information about a basketball team.
+      description: Basic information about a team.
       properties:
         id: { type: string, format: uuid, description: "Unique team ID." }
         name: { type: string, description: "Team name." }
@@ -180,7 +180,7 @@ components:
 
     TeamDetails:
       type: object
-      description: Comprehensive information about a basketball team, including player objects.
+      description: Comprehensive information about a team, including player objects.
       properties:
         id: { type: string, format: uuid, description: "Unique team ID." }
         name: { type: string, description: "Team name." }
@@ -193,7 +193,7 @@ components:
 
     Player:
       type: object
-      description: Data representing an individual basketball player.
+      description: Data representing an individual player.
       properties:
         id: { type: string, format: uuid, description: "Unique player ID." }
         teamId: { type: string, format: uuid, description: "ID of the team the player belongs to." }
@@ -208,7 +208,7 @@ components:
 
     Match:
       type: object
-      description: Information about a basketball game.
+      description: Information about a game.
       properties:
         id: { type: string, format: uuid, description: "Unique match ID." }
         homeTeamId: { type: string, format: uuid, description: "ID of the home team." }
@@ -767,7 +767,7 @@ paths:
     get:
       tags: ["Teams"]
       summary: Get organization teams
-      description: Lists all basketball teams associated with the organization.
+      description: Lists all teams associated with the organization.
       security: [{ OrganizationAuth: [] }]
       parameters:
         - name: organization_id

@@ -1,20 +1,28 @@
 {
   "$schema": "https://raw.githubusercontent.com/devcontainers/spec/refs/heads/main/schemas/devContainer.schema.json",
-  "name": "basketball",
+  "name": "auth",
   "dockerComposeFile": ["../compose.yaml", "./compose.yaml"],
   "service": "devcontainer",
-  "runServices": ["database-1", "database-2", "database-3", "migrate-cluster", "init-cluster", "cache", "devcontainer"],
-  "workspaceFolder": "/workspace/basketball",
+  "runServices": ["database-1", "database-2", "database-3",  "init-cluster", "migrate-cluster", "cache", "devcontainer"],
+  "workspaceFolder": "/workspace/auth",
   "features": {
     "ghcr.io/devcontainers/features/node:2.0.0": {},
     "ghcr.io/devcontainers/features/rust:1": {}
   },
   "postStartCommand": "sudo service nginx start && exit",
   "postCreateCommand": "cd ./app && npm install && cd ../api && cargo build && cargo install cargo-watch --locked && git config --global sequence.editor \"code --wait\"",
-  "forwardPorts": [3000],
+  "forwardPorts": ["auth-devcontainer:3000", "auth-devcontainer:3001", "auth-database-1:8080"],
   "portsAttributes": {
-    "3000": {
-      "label": "NGINX Proxy",
+    "auth-devcontainer:3000": {
+      "label": "Auth API",
+      "onAutoForward": "silent"
+    },
+    "auth-devcontainer:3001": {
+      "label": "Auth App",
+      "onAutoForward": "silent"
+    },
+    "auth-database-1:8080": {
+      "label": "Auth Database",
       "onAutoForward": "silent"
     }
   },

@@ -4,9 +4,9 @@ CREATE DATABASE IF NOT EXISTS dev;
 
 USE dev;
 
-CREATE SCHEMA IF NOT EXISTS basketball;
+CREATE SCHEMA IF NOT EXISTS auth;
 
-CREATE TABLE IF NOT EXISTS basketball.accounts (
+CREATE TABLE IF NOT EXISTS auth.accounts (
     id UUID PRIMARY KEY,
     email STRING UNIQUE NOT NULL,
     password_hash STRING NOT NULL,
@@ -17,10 +17,9 @@ CREATE TABLE IF NOT EXISTS basketball.accounts (
     updated_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_accounts_email ON basketball.accounts(email);
-CREATE INDEX IF NOT EXISTS idx_accounts_created_at ON basketball.accounts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_accounts_email ON auth.accounts(email);
 
-CREATE TABLE IF NOT EXISTS basketball.organizations (
+CREATE TABLE IF NOT EXISTS auth.organizations (
     id UUID PRIMARY KEY,
     name STRING NOT NULL,
     slug STRING UNIQUE NOT NULL,
@@ -29,19 +28,28 @@ CREATE TABLE IF NOT EXISTS basketball.organizations (
     updated_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_organizations_name ON basketball.organizations(name);
-CREATE INDEX IF NOT EXISTS idx_organizations_slug ON basketball.organizations(slug DESC);
-CREATE INDEX IF NOT EXISTS idx_organizations_created_at ON basketball.organizations(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_organizations_name ON auth.organizations(name);
+CREATE INDEX IF NOT EXISTS idx_organizations_slug ON auth.organizations(slug DESC);
 
-CREATE TABLE IF NOT EXISTS basketball.identities (
-    id UUID PRIMARY KEY,
-    organization_id UUID NOT NULL REFERENCES basketball.organizations(id) ON DELETE CASCADE,
-    account_id UUID NOT NULL REFERENCES basketball.accounts(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS auth.identities (
+    account_id UUID NOT NULL REFERENCES auth.accounts(id) ON DELETE CASCADE,
+    organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
-    UNIQUE(organization_id, account_id)
+    PRIMARY KEY (account_id, organization_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_identities_organization_id ON basketball.identities(organization_id);
-CREATE INDEX IF NOT EXISTS idx_identities_account_id ON basketball.identities(account_id);
-CREATE INDEX IF NOT EXISTS idx_identities_created_at ON basketball.identities(created_at DESC);
+CREATE TABLE IF NOT EXISTS auth.roles (
+    id UUID PRIMARY KEY,
+    name STRING NOT NULL UNIQUE,
+    description STRING NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS auth.identities_roles (
+    role_id UUID NOT NULL REFERENCES auth.roles(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES auth.accounts(id) ON DELETE CASCADE,
+    organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, account_id, organization_id)
+);

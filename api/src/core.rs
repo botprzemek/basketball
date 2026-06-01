@@ -45,53 +45,6 @@ impl CoreBuilder {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Registry not initialized"))?;
         let services = Services::new(registry);
-        
-        // use crate::domain::applications::{CreateAccount, CreateIdentity, CreateOrganization};
-
-        // let account = services
-        //     .account()
-        //     .create(CreateAccount {
-        //         email: "v@nightcity.net".to_string(),
-        //         password_hash: services
-        //             .actor()
-        //             .generate_hash("v-1S-th3-Be$t".to_string())
-        //             .await?,
-        //         first_name: "Vincent".to_string(),
-        //         last_name: "Wilson".to_string(),
-        //     })
-        //     .await?;
-
-        // let organization_1 = services
-        //     .organization()
-        //     .create(CreateOrganization {
-        //         name: "Arasaka Corporation".to_string(),
-        //         slug: "arasaka".to_string(),
-        //     })
-        //     .await?;
-
-        // let organization_2 = services
-        //     .organization()
-        //     .create(CreateOrganization {
-        //         name: "Militech International Armaments".to_string(),
-        //         slug: "militech".to_string(),
-        //     })
-        //     .await?;
-
-        // services
-        //     .identity()
-        //     .create(CreateIdentity {
-        //         organization_id: organization_1.id,
-        //         account_id: account.id,
-        //     })
-        //     .await?;
-
-        // services
-        //     .identity()
-        //     .create(CreateIdentity {
-        //         organization_id: organization_2.id,
-        //         account_id: account.id,
-        //     })
-        //     .await?;
 
         self.services = Some(Arc::new(services));
 
