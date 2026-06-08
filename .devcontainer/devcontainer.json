@@ -3,14 +3,22 @@
   "name": "auth",
   "dockerComposeFile": ["../compose.yaml", "./compose.yaml"],
   "service": "devcontainer",
-  "runServices": ["database-1", "database-2", "database-3",  "init-cluster", "migrate-cluster", "cache", "devcontainer"],
+  "runServices": [
+    "database-1",
+    "database-2",
+    "database-3",
+    "init-cluster",
+    "migrate-cluster",
+    "cache",
+    "devcontainer"
+  ],
   "workspaceFolder": "/workspace/auth",
   "features": {
     "ghcr.io/devcontainers/features/node:2.0.0": {},
     "ghcr.io/devcontainers/features/rust:1": {}
   },
-  "postStartCommand": "sudo service nginx start && exit",
-  "postCreateCommand": "cd ./app && npm install && cd ../api && cargo build && cargo install cargo-watch --locked && git config --global sequence.editor \"code --wait\"",
+  "updateContentCommand": "./.devcontainer/updateContentCommand.sh",
+  "postAttachCommand": "git config --global sequence.editor \"code --wait\"",
   "forwardPorts": ["auth-devcontainer:3000", "auth-devcontainer:3001", "auth-database-1:8080"],
   "portsAttributes": {
     "auth-devcontainer:3000": {
@@ -27,6 +35,7 @@
     }
   },
   "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
   "mounts": ["source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"],
   "customizations": {
     "vscode": {

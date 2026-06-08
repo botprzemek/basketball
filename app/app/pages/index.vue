@@ -1,13 +1,15 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ["auth-context"] });
 
-const { organization, roles } = await useOrganization();
+const organization = await useOrganization();
+const roles = await useRoles();
 </script>
 
 <template>
     <main>
-        <h1>{{ organization.slug }}</h1>
-        <p>{{ organization.name }}</p>
+        Organization
+        <h1>{{ organization.name }}</h1>
+        <p>[ {{ organization.slug }} ]</p>
         <div>
             Roles
             <p v-for="role in roles">{{ role }}</p>

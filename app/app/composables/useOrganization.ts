@@ -6,15 +6,6 @@ export const useOrganization = async () => {
             key: "context_organization",
         },
     );
-    const { data: roles } = await useAPI(
-        `/organizations/${context.value.organizationId}/roles`,
-        {
-            key: "context_organization_roles",
-        },
-    );
 
-    return {
-        organization,
-        roles,
-    };
+    return organization;
 };
