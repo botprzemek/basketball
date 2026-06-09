@@ -34,6 +34,34 @@ impl OrganizationHandler {
         }
     }
 
+    async fn identity(
+        State(services): State<Arc<Services>>,
+        actor: AuthenticatedActor,
+    ) -> impl IntoResponse {
+        match services
+            .member()
+            .find_by(actor.account_id)
+            .await
+        {
+            Ok(account) => (StatusCode::OK, Json(account)).into_response(),
+            Err(error) => internal_error(error).into_response(),
+        }
+    }
+
+    async fn members(
+        State(services): State<Arc<Services>>,
+        actor: AuthenticatedActor,
+    ) -> impl IntoResponse {
+        match services
+            .member()
+            .find_all(actor.account_id)
+            .await
+        {
+            Ok(members) => (StatusCode::OK, Json(account)).into_response(),
+            Err(error) => internal_error(error).into_response(),
+        }
+    }
+
     async fn roles(
         State(services): State<Arc<Services>>,
         actor: AuthenticatedActor,
@@ -48,32 +76,12 @@ impl OrganizationHandler {
         }
     }
 
-    // async fn members(
-    //     State(services): State<Arc<Services>>,
-    //     actor: AuthenticatedActor,
-    // ) -> impl IntoResponse {
-    //     let members = match services
-    //         .identity()
-    //         .find_by_organization(actor.organization_id)
-    //         .await
-    //     {
-    //         Ok(members) => members,
-    //         Err(error) => return internal_error(error).into_response(),
-    //     };
-
-    //     let result = members
-    //         .into_iter()
-    //         .map(MembersResponse::from)
-    //         .collect::<Vec<MembersResponse>>();
-
-    //     (StatusCode::OK, Json(result)).into_response()
-    // }
-
     pub fn v1(services: Arc<Services>) -> Router {
         Router::new()
             .route("/{id}", get(Self::organizations_by_id))
+            .route("/{id}/identity", get(Self::identity))
+            .route("/{id}/members", get(Self::members))
             .route("/{id}/roles", get(Self::roles))
-            // .route("/{id}/members", get(Self::members))
             .with_state(services)
     }
 }

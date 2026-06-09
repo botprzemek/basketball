@@ -1,0 +1,85 @@
+# auth-chart/templates/cache.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-cache
+spec:
+  ports:
+    - port: 6379
+      name: valkey
+  selector:
+    app: auth-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-cache-headless
+spec:
+  ports:
+    - port: 6379
+      name: valkey
+    - port: 16379
+      name: cluster-bus
+  clusterIP: None
+  selector:
+    app: auth-cache
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: auth-cache
+spec:
+  serviceName: "auth-cache-headless"
+  replicas: { { .Values.cache.replicas } }
+  selector:
+    matchLabels:
+      app: auth-cache
+  template:
+    metadata:
+      labels:
+        app: auth-cache
+    spec:
+      containers:
+        - name: valkey
+          image: { { .Values.cache.image } }
+          # Flagi włączające tryb klastra i konfigurujące persystencję danych
+          command:
+            - "valkey-server"
+            - "--cluster-enabled"
+            - "yes"
+            - "--cluster-config-file"
+            - "/data/nodes.conf"
+            - "--cluster-node-timeout"
+            - "5000"
+            - "--appendonly"
+            - "yes"
+            - "--bind"
+            - "0.0.0.0"
+            - "--protected-mode"
+            - "no"
+          ports:
+            - containerPort: 6379
+              name: valkey
+            - containerPort: 16379
+              name: cluster-bus
+          livenessProbe:
+            exec:
+              command: ["valkey-cli", "PING"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "PING"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: cachedata
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: cachedata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: { { .Values.cache.storageSize } }

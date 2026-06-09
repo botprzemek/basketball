@@ -5,8 +5,7 @@ use uuid::Uuid;
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Member {
-    pub identity_id: Uuid,
-    pub account_id: Uuid,
+    pub id: Uuid,
     pub organization_id: Uuid,
     pub email: String,
     pub first_name: String,

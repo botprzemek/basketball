@@ -1,0 +1,51 @@
+# auth-chart/templates/api.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-api
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: auth-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-api
+spec:
+  replicas: { { .Values.api.replicas } }
+  selector:
+    matchLabels:
+      app: auth-api
+  template:
+    metadata:
+      labels:
+        app: auth-api
+    spec:
+      # Czekamy na pomyślne ukończenie Joba inicjalizującego bazę danych zanim podniesiemy API
+      initContainers:
+        - name: wait-for-bootstrap
+          image: groundnuty/k8s-wait-for:v2.0
+          args: ["job", "auth-database-bootstrap"]
+      containers:
+        - name: api
+          image: { { .Values.api.image } }
+          ports:
+            - containerPort: 3000
+          env:
+            - name: API_SERVER_HOST
+              value: "0.0.0.0"
+            - name: API_SERVER_PORT
+              value: "3000"
+            - name: API_DATABASE_HOST
+              value: "auth-database"
+            - name: API_DATABASE_PORT
+              value: "26257"
+            - name: API_DATABASE_NAME
+              value: "dev"
+            - name: API_CACHE_HOST
+              value: "auth-cache-headless"
+            - name: API_CACHE_PORT
+              value: "6379"

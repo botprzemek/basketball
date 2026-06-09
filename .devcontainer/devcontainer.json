@@ -17,8 +17,8 @@
     "ghcr.io/devcontainers/features/node:2.0.0": {},
     "ghcr.io/devcontainers/features/rust:1": {}
   },
-  "updateContentCommand": "./.devcontainer/updateContentCommand.sh",
-  "postAttachCommand": "git config --global sequence.editor \"code --wait\"",
+  "updateContentCommand": "${containerWorkspaceFolder}/.devcontainer/updateContentCommand.sh",
+  "postAttachCommand": "${containerWorkspaceFolder}/.devcontainer/postAttachCommand.sh",
   "forwardPorts": ["auth-devcontainer:3000", "auth-devcontainer:3001", "auth-database-1:8080"],
   "portsAttributes": {
     "auth-devcontainer:3000": {
@@ -123,7 +123,6 @@
           "**/.output": true,
           "**/node_modules": true
         },
-        "editor.defaultFormatter": "oxc.oxc-vscode",
         "editor.codeActionsOnSave": {
           "source.organizeImports": "never",
           "source.fixAll.oxc": "always",
@@ -141,7 +140,13 @@
         "rust-analyzer.check.command": "clippy",
         "rust-analyzer.cargo.buildScripts.enable": true,
         "#js/ts.suggest.completeFunctionCalls#": true,
-        "#js/ts.preferences.importModuleSpecifier#": "non-relative"
+        "#js/ts.preferences.importModuleSpecifier#": "non-relative",
+
+        "[html]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer"
+        },
+
+        "editor.defaultFormatter": "oxc.oxc-vscode"
       }
     }
   }

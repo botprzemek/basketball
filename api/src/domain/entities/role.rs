@@ -6,6 +6,7 @@ use uuid::Uuid;
 #[serde(rename_all = "camelCase")]
 pub struct Role {
     pub id: Uuid,
+    pub organization_id: Uuid,
     pub name: String,
     pub description: String,
     pub created_at: DateTime<Utc>,
@@ -13,9 +14,10 @@ pub struct Role {
 }
 
 impl Role {
-    pub fn new(name: String, description: String) -> Self {
+    pub fn new(organization_id: Uuid, name: String, description: String) -> Self {
         Self {
             id: Uuid::now_v7(),
+            organization_id,
             name,
             description,
             created_at: Utc::now(),

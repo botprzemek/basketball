@@ -34,6 +34,7 @@ diesel::table! {
 diesel::table! {
     auth.roles(id) {
         id -> Uuid,
+        organization_id -> Uuid,
         name -> Text,
         description -> Text,
         created_at -> Timestamptz,
@@ -53,6 +54,8 @@ diesel::table! {
 
 diesel::joinable!(identities -> accounts(account_id));
 diesel::joinable!(identities -> organizations(organization_id));
+
+diesel::joinable!(roles -> organizations(organization_id));
 
 diesel::joinable!(identities_roles -> roles(role_id));
 diesel::joinable!(identities_roles -> accounts(account_id));

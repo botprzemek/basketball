@@ -1,0 +1,24 @@
+global:
+  namespace: auth
+
+database:
+  replicas: 3
+  image: "cockroachdb/cockroach:latest-v26.1"
+  storageSize: 10Gi
+
+cache:
+  image: "valkey/valkey:9.0-alpine"
+  replicas: 6
+  storageSize: 2Gi
+
+api:
+  replicas: 2
+  image: "auth/api:0.1.0"
+  service:
+    port: 3000
+
+app:
+  replicas: 2
+  image: "auth/app:0.1.0"
+  service:
+    port: 3001

@@ -42,19 +42,21 @@ VALUES
     )
 ON CONFLICT (account_id, organization_id) DO NOTHING;
 
-INSERT INTO auth.roles (id, name, description)
+INSERT INTO auth.roles (id, organization_id, name, description)
 VALUES
     (
         '019ed397-bb71-7000-8804-d02f5b45f448',
+        'b2bc3456-1234-5678-90ab-cdef12345678',
         'solo',
         'Standard Enforcer'
     ),
     (
         '019ed397-bb72-7476-880e-0d12fe84411d',
+        'c3cd4567-2345-6789-01bc-defa23456789',
         'netrunner',
         'Cybernetic Specialist'
     )
-ON CONFLICT (name) DO NOTHING;
+ON CONFLICT (organization_id, name) DO NOTHING;
 
 INSERT INTO auth.identities_roles (role_id, account_id, organization_id)
 VALUES

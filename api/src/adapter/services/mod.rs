@@ -9,7 +9,7 @@ use token::TokenService;
 pub use token::AuthenticationState;
 
 use crate::domain::applications::{
-    AccountApplication, IdentityApplication, OrganizationApplication,
+    AccountApplication, IdentityApplication, MemberApplication, OrganizationApplication
 };
 use crate::{
     adapter::{
@@ -24,12 +24,14 @@ use crate::{
 pub type AccountService = AccountApplication<AccountRepository>;
 pub type OrganizationService = OrganizationApplication<OrganizationRepository>;
 pub type IdentityService = IdentityApplication<IdentityRepository>;
+pub type MemberService = MemberApplication<AccountRepository, IdentityRepository>;
 pub type RoleService = RoleApplication<RoleRepository>;
 
 pub struct Services {
     account: AccountService,
     organization: OrganizationService,
     identity: IdentityService,
+    member: MemberService,
     role: RoleService,
     actor: ActorService,
     token: TokenService,
@@ -42,6 +44,7 @@ impl Services {
         let account = AccountApplication::new(registry.account_repository.clone());
         let organization = OrganizationApplication::new(registry.organization_repository.clone());
         let identity = IdentityApplication::new(registry.identity_repository.clone());
+        let member = MemberApplication::new(registry.account_repository.clone(), registry.identity_repository.clone());
         let role = RoleApplication::new(registry.role_repository.clone());
 
         let actor = ActorService::new(
@@ -57,6 +60,7 @@ impl Services {
             account,
             organization,
             identity,
+            member,
             role,
             actor,
             token,
@@ -73,6 +77,10 @@ impl Services {
 
     pub fn identity(&self) -> &IdentityService {
         &self.identity
+    }
+
+    pub fn member(&self) -> &MemberService {
+        &self.member
     }
 
     pub fn role(&self) -> &RoleService {
