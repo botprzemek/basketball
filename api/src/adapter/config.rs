@@ -7,7 +7,6 @@ pub struct Config {
     database_host: String,
     database_port: u16,
     database_name: String,
-    
     // cache_host: String,
     // cache_port: u16,
     // cache_ttl: u64,
@@ -28,7 +27,6 @@ pub trait DatabaseConfig {
 
 impl Config {
     pub fn load() -> anyhow::Result<Self> {
-
         let server_host = var("API_SERVER_HOST")?;
         let server_port = var("API_SERVER_PORT")?.parse::<u16>()?;
 
@@ -47,7 +45,6 @@ impl Config {
             database_host,
             database_port,
             database_name,
-
             // cache_host,
             // cache_port,
             // cache_ttl,

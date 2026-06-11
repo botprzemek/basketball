@@ -40,7 +40,7 @@ impl OrganizationHandler {
     ) -> impl IntoResponse {
         match services
             .member()
-            .find_by(actor.account_id)
+            .find_by_identity(actor.organization_id, actor.account_id)
             .await
         {
             Ok(account) => (StatusCode::OK, Json(account)).into_response(),
@@ -52,12 +52,8 @@ impl OrganizationHandler {
         State(services): State<Arc<Services>>,
         actor: AuthenticatedActor,
     ) -> impl IntoResponse {
-        match services
-            .member()
-            .find_all(actor.account_id)
-            .await
-        {
-            Ok(members) => (StatusCode::OK, Json(account)).into_response(),
+        match services.member().find_all(actor.account_id).await {
+            Ok(members) => (StatusCode::OK, Json(members)).into_response(),
             Err(error) => internal_error(error).into_response(),
         }
     }

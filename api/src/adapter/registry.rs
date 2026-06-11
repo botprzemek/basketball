@@ -3,14 +3,18 @@ use std::sync::Arc;
 use crate::adapter::{
     config::DatabaseConfig,
     providers::PostgresProvider,
-    repositories::{AccountRepository, IdentityRepository, OrganizationRepository, RoleRepository},
+    repositories::{
+        AccountRepository, IdentityRepository, MemberRepository, OrganizationRepository,
+        RoleRepository,
+    },
 };
 
 pub struct Registry {
-    pub account_repository: AccountRepository,
-    pub organization_repository: OrganizationRepository,
-    pub identity_repository: IdentityRepository,
-    pub role_repository: RoleRepository,
+    pub account: AccountRepository,
+    pub organization: OrganizationRepository,
+    pub identity: IdentityRepository,
+    pub member: MemberRepository,
+    pub role: RoleRepository,
 }
 
 impl Registry {
@@ -18,10 +22,11 @@ impl Registry {
         let provider = Arc::new(PostgresProvider::new(config).await?);
 
         Ok(Self {
-            account_repository: AccountRepository::new(provider.clone()),
-            organization_repository: OrganizationRepository::new(provider.clone()),
-            identity_repository: IdentityRepository::new(provider.clone()),
-            role_repository: RoleRepository::new(provider.clone()),
+            account: AccountRepository::new(provider.clone()),
+            organization: OrganizationRepository::new(provider.clone()),
+            identity: IdentityRepository::new(provider.clone()),
+            member: MemberRepository::new(provider.clone()),
+            role: RoleRepository::new(provider.clone()),
         })
     }
 }

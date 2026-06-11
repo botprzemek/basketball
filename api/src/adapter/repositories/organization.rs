@@ -2,20 +2,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use diesel::{
-    prelude::*,
-};
+use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::adapter::{
-    providers::PostgresProvider,
-    repositories::organizations::dsl::*,
-};
-use crate::domain::{
-    entities::Organization,
-    ports::OrganizationPort,
-};
+use crate::adapter::{providers::PostgresProvider, repositories::organizations::dsl::*};
+use crate::domain::{entities::Organization, ports::OrganizationPort};
 
 #[derive(Clone)]
 pub struct OrganizationRepository {
@@ -24,7 +16,7 @@ pub struct OrganizationRepository {
 
 #[derive(Debug, Clone, Queryable, Selectable, Insertable, Identifiable, AsChangeset)]
 #[diesel(table_name = crate::adapter::repositories::organizations)]
-#[diesel(check_for_backend(diesel::pg::Pg))] 
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct OrganizationRow {
     pub id: Uuid,
     pub name: String,
@@ -62,9 +54,7 @@ impl From<Organization> for OrganizationRow {
 
 impl OrganizationRepository {
     pub fn new(provider: Arc<PostgresProvider>) -> Self {
-        Self {
-            provider,
-        }
+        Self { provider }
     }
 }
 
@@ -115,10 +105,10 @@ impl OrganizationPort for OrganizationRepository {
 
     async fn delete(&self, self_id: Uuid) -> anyhow::Result<()> {
         let connection = &mut self.provider.get().await?;
-        let _result = diesel::delete(
-            organizations.filter(id.eq(self_id))
-        ).execute(connection).await?;
-        
+        let _result = diesel::delete(organizations.filter(id.eq(self_id)))
+            .execute(connection)
+            .await?;
+
         Ok(())
     }
 }

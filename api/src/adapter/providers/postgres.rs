@@ -20,12 +20,13 @@ impl PostgresProvider {
             .build(connection_manager)
             .await?;
 
-        Ok(Self {
-            pool,
-        })
+        Ok(Self { pool })
     }
 
     pub async fn get(&self) -> anyhow::Result<ProviderConnection<'_>> {
-        self.pool.get().await.context("Failed to get connection from Postgres pool")
+        self.pool
+            .get()
+            .await
+            .context("Failed to get connection from Postgres pool")
     }
 }

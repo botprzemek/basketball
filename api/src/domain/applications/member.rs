@@ -1,7 +1,6 @@
-use chrono::Utc;
 use uuid::Uuid;
 
-use crate::domain::{entities::{Member}, ports::{MemberPort}};
+use crate::domain::{entities::Member, ports::MemberPort};
 
 pub struct MemberApplication<M: MemberPort> {
     member_service: M,
@@ -12,15 +11,17 @@ impl<M: MemberPort> MemberApplication<M> {
         Self { member_service }
     }
 
-    pub fn find_all(&self, organization_id: Uuid) {
-        self.member_service
+    pub async fn find_all(&self, organization_id: Uuid) -> anyhow::Result<Vec<Member>> {
+        self.member_service.select(organization_id).await
     }
 
-    pub fn find_by_identity(
+    pub async fn find_by_identity(
         &self,
         organization_id: Uuid,
-        account_id: Uuid
-    ) {
+        account_id: Uuid,
+    ) -> anyhow::Result<Option<Member>> {
         self.member_service
+            .select_by_account(organization_id, account_id)
+            .await
     }
 }

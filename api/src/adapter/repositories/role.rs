@@ -73,21 +73,26 @@ impl RolePort for RoleRepository {
     ) -> anyhow::Result<Vec<Role>> {
         let connection = &mut self.provider.get().await?;
 
-        let rows = connection.build_transaction().read_only().run(| conn | {
-            async move {
-                diesel::sql_query("SELECT set_config('app.current_organization_id', $1, true)")
-                    .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
-                    .execute(conn)
-                    .await?;
+        let rows = connection
+            .build_transaction()
+            .read_only()
+            .run(|conn| {
+                async move {
+                    diesel::sql_query("SELECT set_config('app.current_organization_id', $1, true)")
+                        .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
+                        .execute(conn)
+                        .await?;
 
-                roles::table
-                    .distinct()
-                    .filter(roles::organization_id.eq(self_organization_id))
-                    .select(RoleRow::as_select())
-                    .get_results::<RoleRow>(conn)
-                    .await
-            }.scope_boxed()
-        }).await?;
+                    roles::table
+                        .distinct()
+                        .filter(roles::organization_id.eq(self_organization_id))
+                        .select(RoleRow::as_select())
+                        .get_results::<RoleRow>(conn)
+                        .await
+                }
+                .scope_boxed()
+            })
+            .await?;
 
         let results = rows.into_iter().map(Role::from).collect::<Vec<_>>();
 

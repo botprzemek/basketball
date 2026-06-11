@@ -8,23 +8,22 @@ use token::TokenService;
 
 pub use token::AuthenticationState;
 
-use crate::domain::applications::{
-    AccountApplication, IdentityApplication, MemberApplication, OrganizationApplication
-};
-use crate::{
-    adapter::{
-        Registry,
-        repositories::{
-            AccountRepository, IdentityRepository, OrganizationRepository, RoleRepository,
-        },
+use crate::adapter::{
+    Registry,
+    repositories::{
+        AccountRepository, IdentityRepository, MemberRepository, OrganizationRepository,
+        RoleRepository,
     },
-    domain::applications::RoleApplication,
+};
+use crate::domain::applications::{
+    AccountApplication, IdentityApplication, MemberApplication, OrganizationApplication,
+    RoleApplication,
 };
 
 pub type AccountService = AccountApplication<AccountRepository>;
 pub type OrganizationService = OrganizationApplication<OrganizationRepository>;
 pub type IdentityService = IdentityApplication<IdentityRepository>;
-pub type MemberService = MemberApplication<AccountRepository, IdentityRepository>;
+pub type MemberService = MemberApplication<MemberRepository>;
 pub type RoleService = RoleApplication<RoleRepository>;
 
 pub struct Services {
@@ -41,17 +40,17 @@ impl Services {
     pub fn new(registry: &Registry) -> Self {
         let password = PasswordService::new();
 
-        let account = AccountApplication::new(registry.account_repository.clone());
-        let organization = OrganizationApplication::new(registry.organization_repository.clone());
-        let identity = IdentityApplication::new(registry.identity_repository.clone());
-        let member = MemberApplication::new(registry.account_repository.clone(), registry.identity_repository.clone());
-        let role = RoleApplication::new(registry.role_repository.clone());
+        let account = AccountApplication::new(registry.account.clone());
+        let organization = OrganizationApplication::new(registry.organization.clone());
+        let identity = IdentityApplication::new(registry.identity.clone());
+        let member = MemberApplication::new(registry.member.clone());
+        let role = RoleApplication::new(registry.role.clone());
 
         let actor = ActorService::new(
             password.clone(),
-            AccountApplication::new(registry.account_repository.clone()),
-            OrganizationApplication::new(registry.organization_repository.clone()),
-            IdentityApplication::new(registry.identity_repository.clone()),
+            AccountApplication::new(registry.account.clone()),
+            OrganizationApplication::new(registry.organization.clone()),
+            IdentityApplication::new(registry.identity.clone()),
             TokenService::new("auth".to_string(), "secret".to_string()),
         );
         let token = TokenService::new("auth".to_string(), "secret".to_string());
