@@ -11,11 +11,14 @@ const roles = await useRoles();
     <main>
         Organization
         <h1>{{ organization }}</h1>
+
         <p>{{ identity }}</p>
+
         <div>
             Members
             <p v-for="member in members">{{ member }}</p>
         </div>
+
         <div>
             Roles
             <p v-for="role in roles">{{ role }}</p>

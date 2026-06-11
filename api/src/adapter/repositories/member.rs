@@ -25,7 +25,7 @@ impl From<(AccountRow, IdentityRow)> for Member {
             email: account.email,
             first_name: account.first_name,
             last_name: account.last_name,
-            created_at: identity.created_at,
+            joined_at: identity.created_at,
             updated_at: identity.updated_at,
         }
     }
@@ -75,6 +75,31 @@ impl MemberPort for MemberRepository {
     ) -> anyhow::Result<Option<Member>> {
         let connection = &mut self.provider.get().await?;
 
-        todo!()
+        let row = connection
+            .build_transaction()
+            .read_only()
+            .run(|conn| {
+                async move {
+                    diesel::sql_query("SELECT set_config('app.current_organization_id', $1, true)")
+                        .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
+                        .execute(conn)
+                        .await?;
+
+                    identities::table
+                        .inner_join(accounts::table)
+                        .filter(identities::organization_id.eq(self_organization_id))
+                        .filter(identities::account_id.eq(self_account_id))
+                        .select((AccountRow::as_select(), IdentityRow::as_select()))
+                        .first::<(AccountRow, IdentityRow)>(conn)
+                        .await
+                        .optional()
+                }
+                .scope_boxed()
+            })
+            .await?;
+
+        let result = row.map(Member::from);
+
+        Ok(result)
     }
 }

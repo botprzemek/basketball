@@ -52,7 +52,7 @@ impl OrganizationHandler {
         State(services): State<Arc<Services>>,
         actor: AuthenticatedActor,
     ) -> impl IntoResponse {
-        match services.member().find_all(actor.account_id).await {
+        match services.member().find_all(actor.organization_id).await {
             Ok(members) => (StatusCode::OK, Json(members)).into_response(),
             Err(error) => internal_error(error).into_response(),
         }
