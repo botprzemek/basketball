@@ -47,14 +47,17 @@ impl MemberPort for MemberRepository {
             .read_only()
             .run(|conn| {
                 async move {
-                    diesel::sql_query("SELECT set_config('app.current_organization_id', $1, true)")
+                    diesel::sql_query("RESET ALL").execute(conn).await?;
+
+                    diesel::sql_query("SET auth.organization_id = $1")
                         .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
                         .execute(conn)
                         .await?;
 
                     identities::table
+                        .distinct()
                         .inner_join(accounts::table)
-                        .filter(identities::organization_id.eq(self_organization_id))
+                        // .filter(identities::organization_id.eq(self_organization_id))
                         .select((AccountRow::as_select(), IdentityRow::as_select()))
                         .get_results::<(AccountRow, IdentityRow)>(conn)
                         .await
@@ -80,15 +83,21 @@ impl MemberPort for MemberRepository {
             .read_only()
             .run(|conn| {
                 async move {
-                    diesel::sql_query("SELECT set_config('app.current_organization_id', $1, true)")
+                    diesel::sql_query("RESET ALL").execute(conn).await?;
+
+                    diesel::sql_query("SET auth.account_id = $1")
+                        .bind::<diesel::sql_types::Uuid, _>(self_account_id)
+                        .execute(conn)
+                        .await?;
+
+                    diesel::sql_query("SET auth.organization_id = $1")
                         .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
                         .execute(conn)
                         .await?;
 
                     identities::table
+                        .distinct()
                         .inner_join(accounts::table)
-                        .filter(identities::organization_id.eq(self_organization_id))
-                        .filter(identities::account_id.eq(self_account_id))
                         .select((AccountRow::as_select(), IdentityRow::as_select()))
                         .first::<(AccountRow, IdentityRow)>(conn)
                         .await

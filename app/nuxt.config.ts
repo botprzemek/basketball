@@ -18,7 +18,7 @@ export default defineNuxtConfig({
     },
 
     runtimeConfig: {
-        apiHost: "",
+        apiUrl: "",
         tokens: {
             identity: "identity-token",
             access: "access-token",

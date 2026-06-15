@@ -14,6 +14,7 @@ export default defineNuxtPlugin({
                 return await navigateTo("/");
             },
             "auth:logout": async () => {
+                clearNuxtData();
                 clearNuxtState(["auth_organizations", "auth_current"]);
                 return await navigateTo("/auth/login");
             },

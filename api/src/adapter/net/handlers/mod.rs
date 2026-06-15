@@ -1,7 +1,7 @@
 pub mod v1;
 
 pub use v1::AuthenticationHandler;
-pub use v1::OrganizationHandler;
+pub use v1::OrganizationsHandler;
 
 use axum::http::StatusCode;
 use std::fmt::Display;

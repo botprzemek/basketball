@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use diesel_async::scoped_futures::ScopedFutureExt;
 use uuid::Uuid;
 
 use crate::domain::{entities::Identity, ports::IdentityPort};
@@ -84,12 +85,30 @@ impl IdentityPort for IdentityRepository {
     ) -> anyhow::Result<Vec<(Identity, Organization)>> {
         let connection = &mut self.provider.get().await?;
 
-        let results = identities::table
-            .inner_join(organizations::table)
-            .filter(identities::account_id.eq(self_account_id))
-            .select((IdentityRow::as_select(), OrganizationRow::as_select()))
-            .get_results::<(IdentityRow, OrganizationRow)>(connection)
-            .await?
+        let rows = connection
+            .build_transaction()
+            .read_only()
+            .run(|conn| {
+                async move {
+                    diesel::sql_query("RESET ALL").execute(conn).await?;
+
+                    diesel::sql_query("SET auth.account_id = $1")
+                        .bind::<diesel::sql_types::Uuid, _>(self_account_id)
+                        .execute(conn)
+                        .await?;
+
+                    identities::table
+                        .distinct()
+                        .inner_join(organizations::table)
+                        .select((IdentityRow::as_select(), OrganizationRow::as_select()))
+                        .get_results::<(IdentityRow, OrganizationRow)>(conn)
+                        .await
+                }
+                .scope_boxed()
+            })
+            .await?;
+
+        let results = rows
             .into_iter()
             .map(|(identity, organization)| {
                 (Identity::from(identity), Organization::from(organization))

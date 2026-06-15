@@ -1,9 +1,9 @@
 export const useRoles = async () => {
     const { context } = useAuth();
     const { data: roles } = await useAPI(
-        `/organizations/${context.value.organizationId}/roles`,
+        `/api/v1/organizations/${context.value.organizationId}/roles`,
         {
-            key: "context_organization_roles",
+            key: "organization_roles",
         },
     );
 

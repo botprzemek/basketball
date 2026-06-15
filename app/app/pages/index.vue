@@ -1,18 +1,21 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ["auth-context"] });
 
+const { logout } = useAuth();
+
 const organization = await useOrganization();
-const identity = await useIdentity();
 const members = await useMembers();
 const roles = await useRoles();
 </script>
 
 <template>
     <main>
+        <aside class="absolute top-0">
+            <button @click.prevent="logout()">Logout</button>
+        </aside>
+
         Organization
         <h1>{{ organization }}</h1>
-
-        <p>{{ identity }}</p>
 
         <div>
             Members

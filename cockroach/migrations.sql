@@ -6,6 +6,12 @@ USE dev;
 
 CREATE SCHEMA IF NOT EXISTS auth;
 
+CREATE USER IF NOT EXISTS dev WITH PASSWORD 'your-password';
+
+GRANT USAGE ON SCHEMA auth TO dev;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA auth TO dev;
+ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO dev;
+
 CREATE TABLE IF NOT EXISTS auth.accounts (
     id UUID PRIMARY KEY,
     email STRING NOT NULL UNIQUE,
@@ -46,11 +52,21 @@ CREATE INDEX IF NOT EXISTS idx_identities_organization_id
     ON auth.identities(organization_id)
     STORING (created_at, updated_at);
 
-ALTER TABLE auth.identities ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_policy
+ALTER TABLE auth.identities ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;
+CREATE POLICY identities_isolation_policy
     ON auth.identities
-    AS RESTRICTIVE
-    USING (organization_id = NULLIF(current_setting('app.current_organization_id', true), '')::UUID);
+    AS PERMISSIVE
+    FOR ALL
+    USING (
+        organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID
+        OR 
+        account_id = NULLIF(current_setting('auth.account_id', true), '')::UUID
+    )
+    WITH CHECK (
+        organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID
+        OR 
+        account_id = NULLIF(current_setting('auth.account_id', true), '')::UUID
+    );
 
 CREATE TABLE IF NOT EXISTS auth.roles (
     id UUID PRIMARY KEY,
@@ -68,11 +84,13 @@ CREATE INDEX IF NOT EXISTS idx_roles_organization_id
     ON auth.roles(organization_id)
     STORING (name, description, created_at, updated_at);
 
-ALTER TABLE auth.roles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_policy
+ALTER TABLE auth.roles ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;
+CREATE POLICY roles_isolation_policy
     ON auth.roles
-    AS RESTRICTIVE
-    USING (organization_id = NULLIF(current_setting('app.current_organization_id', true), '')::UUID);
+    AS PERMISSIVE
+    FOR ALL
+    USING (organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID)
+    WITH CHECK (organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID);
 
 CREATE TABLE IF NOT EXISTS auth.identities_roles (
     role_id UUID NOT NULL,
@@ -92,10 +110,10 @@ CREATE INDEX IF NOT EXISTS idx_identities_roles_account_id
 CREATE INDEX IF NOT EXISTS idx_identities_roles_organization_id 
     ON auth.identities_roles(organization_id);
 
-ALTER TABLE auth.identities_roles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_policy
+ALTER TABLE auth.identities_roles ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;
+CREATE POLICY identities_roles_isolation_policy
     ON auth.identities_roles
-    AS RESTRICTIVE
-    USING (organization_id = NULLIF(current_setting('app.current_organization_id', true), '')::UUID);
-
-    USE dev;
+    AS PERMISSIVE
+    FOR ALL
+    USING (organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID)
+    WITH CHECK (organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID);

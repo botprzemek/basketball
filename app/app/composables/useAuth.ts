@@ -10,12 +10,12 @@ export const useAuth = () => {
     const isAuthenticated = computed(() => !!context.value);
 
     const login = async (credentials: LoginCredentials) => {
-        await $api("/auth/login", {
+        await $api("/api/v1/auth/login", {
             method: "POST",
             body: credentials,
         });
 
-        organizations.value = await $api("/auth/context", {
+        organizations.value = await $api("/api/v1/auth/context", {
             method: "GET",
         });
 
@@ -23,7 +23,7 @@ export const useAuth = () => {
     };
 
     const select = async (organization: any) => {
-        await $api("/auth/context/select", {
+        await $api("/api/v1/auth/context/select", {
             method: "POST",
             body: {
                 organizationId: organization.id,
@@ -35,7 +35,7 @@ export const useAuth = () => {
 
     const current = async () => {
         try {
-            context.value = await $api("/auth/context/current");
+            context.value = await $api("/api/v1/auth/context/current");
         } catch {
             context.value = null;
         }
@@ -44,7 +44,7 @@ export const useAuth = () => {
     const logout = async () => {
         await callHook("auth:logout");
 
-        await $api("/auth/logout", {
+        await $api("/api/v1/auth/logout", {
             method: "POST",
         });
     };

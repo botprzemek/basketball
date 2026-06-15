@@ -4,10 +4,11 @@ export default defineNuxtPlugin({
     parallel: true,
     dependsOn: [],
     setup: (_nuxtApp) => {
+        const { apiUrl } = useRuntimeConfig();
         const headers = useRequestHeaders(["cookie"]);
 
         const api = $fetch.create({
-            baseURL: "http://localhost:3000/api/v1",
+            baseURL: apiUrl,
             credentials: "include",
             headers,
         });

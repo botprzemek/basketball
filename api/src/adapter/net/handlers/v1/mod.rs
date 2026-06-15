@@ -1,5 +1,5 @@
 mod authentication;
-mod organization;
+mod organizations;
 
 pub use authentication::AuthenticationHandler;
-pub use organization::OrganizationHandler;
+pub use organizations::OrganizationsHandler;

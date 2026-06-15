@@ -5,21 +5,21 @@ RUN mkdir src
 RUN echo "fn main() {}" > src/main.rs
 RUN cargo build --release
 
-WORKDIR /api
+WORKDIR /app
 COPY --chown=nonroot:nonroot . .
-RUN cargo build --release --bin api
+RUN cargo build --release --bin auth_api
 
 
 
 FROM cgr.dev/chainguard/glibc-dynamic AS runner
 
-WORKDIR /api
+WORKDIR /app
 
 ENV SERVER_HOST=0.0.0.0
 ENV SERVER_PORT=3000
 
-COPY --from=builder --chown=nonroot:nonroot /api/target/release/api /usr/local/bin/api
+COPY --from=builder --chown=nonroot:nonroot /app/target/release/auth_api /usr/local/bin/auth_api
 
 EXPOSE 3000
 
-CMD ["/usr/local/bin/api"]
+CMD ["/usr/local/bin/auth_api"]

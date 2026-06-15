@@ -70,7 +70,7 @@ impl TokenService {
         }
     }
 
-    pub fn decode(&self, token: &str) -> anyhow::Result<Claims> {
+    pub fn decode(&self, token: String) -> anyhow::Result<Claims> {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_audience(&["auth:identity", "auth:access", "auth:refresh"]);
         validation.set_issuer(&[&self.issuer]);
@@ -133,7 +133,7 @@ impl TokenService {
         Ok(AuthenticationState::Authenticated { access, refresh })
     }
 
-    pub fn authenticate(&self, token: &str) -> anyhow::Result<Actor> {
+    pub fn authenticate(&self, token: String) -> anyhow::Result<Actor> {
         match self.decode(token)? {
             Claims::Identity(claims) => Ok(Actor::Selection(IdentitySelectionActor {
                 account_id: claims.sub,
@@ -146,7 +146,7 @@ impl TokenService {
         }
     }
 
-    pub fn refresh(&self, token: &str) -> anyhow::Result<AuthenticationState> {
+    pub fn refresh(&self, token: String) -> anyhow::Result<AuthenticationState> {
         match self.decode(token)? {
             Claims::Refresh(claims) => self.issue_authentication(claims.oid, claims.sub),
             _ => Err(anyhow::anyhow!("Invalid refresh token")),

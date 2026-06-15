@@ -44,7 +44,8 @@ impl CoreBuilder {
             .registry
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Registry not initialized"))?;
-        let services = Services::new(registry);
+
+        let services = Services::new(self.config.as_ref(), registry);
 
         self.services = Some(Arc::new(services));
 
@@ -60,8 +61,6 @@ impl CoreBuilder {
         let gateway = Gateway::new(self.config.as_ref(), services)
             .await?
             .with_auth()
-            .with_scope()
-            .with_v1()
             .with_organizations()
             .with_cors();
 

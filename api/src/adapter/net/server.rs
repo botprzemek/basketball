@@ -1,6 +1,7 @@
 use axum::{
     Router,
     http::{Method, header},
+    middleware,
 };
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -9,7 +10,8 @@ use tower_http::cors::CorsLayer;
 use crate::adapter::{
     Services,
     config::ServerConfig,
-    net::handlers::{AuthenticationHandler, OrganizationHandler},
+    net::handlers::{AuthenticationHandler, OrganizationsHandler},
+    net::middleware::context_middleware,
 };
 
 pub struct Gateway {
@@ -20,7 +22,7 @@ pub struct Gateway {
 
 impl Gateway {
     pub async fn new(config: &impl ServerConfig, services: Arc<Services>) -> anyhow::Result<Self> {
-        let address = config.get_server_url();
+        let address = config.server_url();
         let router = Router::new();
 
         Ok(Gateway {
@@ -40,57 +42,18 @@ impl Gateway {
     }
 
     pub fn with_organizations(mut self) -> Self {
+        let middleware = middleware::from_fn_with_state(self.services.clone(), context_middleware);
+
         self.router = self.router.nest(
             "/api/v1/organizations",
-            OrganizationHandler::v1(self.services.clone()),
+            OrganizationsHandler::v1(self.services.clone()).layer(middleware),
         );
-
-        // let prefix = "/api/v1/organizations/{organization_id}";
-
-        // self.router = self
-        //     .router
-        //     .nest(
-        //         &format!("{}/members", prefix),
-        //         MembersHandler::v1(self.services.clone()),
-        //     )
-        //     .nest(
-        //         &format!("{}/groups", prefix),
-        //         GroupHandler::v1(self.services.clone()),
-        //     )
-        //     .nest(
-        //         &format!("{}/roles", prefix),
-        //         RoleHandler::v1(self.services.clone()),
-        //     )
-        //     .nest(
-        //         &format!("{}/permissions", prefix),
-        //         PermissionHandler::v1(self.services.clone()),
-        //     )
-        //     .nest(
-        //         &format!("{}/logs", prefix),
-        //         AuditLogHandler::v1(self.services.clone()),
-        //     );
-
-        self
-    }
-
-    pub fn with_scope(mut self) -> Self {
-        self.router = self.router.nest(
-            "/api/v1/organization",
-            OrganizationHandler::v1(self.services.clone()),
-        );
-
-        self
-    }
-
-    pub fn with_v1(mut self) -> Self {
-        let routes_v1 = Router::new();
-
-        self.router = self.router.nest("/api/v1/system", routes_v1);
 
         self
     }
 
     pub fn with_cors(mut self) -> Self {
+        // TODO - Cors settings
         let cors = CorsLayer::new()
             .allow_origin(
                 "http://localhost:3001"
