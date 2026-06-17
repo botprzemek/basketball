@@ -6,7 +6,9 @@ const { organizations, select, logout } = useAuth();
 
 <template>
     <form>
-        <button @click="logout()">Logout</button>
+        <aside class="absolute top-0">
+            <button @click.prevent="logout()">Logout</button>
+        </aside>
 
         <ul>
             <li

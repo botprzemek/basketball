@@ -38,16 +38,6 @@ impl<O: IdentityPort> IdentityApplication<O> {
         self.identity_service.select_by_account(account_id).await
     }
 
-    pub async fn find_by_self(
-        &self,
-        account_id: Uuid,
-        organization_id: Uuid,
-    ) -> anyhow::Result<Option<Identity>> {
-        self.identity_service
-            .select_by_self(account_id, organization_id)
-            .await
-    }
-
     pub async fn create(&self, command: CreateIdentity) -> anyhow::Result<Identity> {
         let identity = Identity::new(command.account_id, command.organization_id);
 

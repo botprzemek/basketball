@@ -1,52 +1,54 @@
 export const useAuth = () => {
-    const { $api, callHook } = useNuxtApp();
+    const { $api } = useNuxtApp();
     const organizations = useState<any | null>(
-        "auth_organizations",
+        "auth-organizations",
         () => null,
     );
-    const context = useState<any | null>("auth_current", () => null);
+    const context = useState<any | null>("auth-context", () => null);
 
     const isLogged = computed(() => !!organizations.value);
     const isAuthenticated = computed(() => !!context.value);
 
     const login = async (credentials: LoginCredentials) => {
-        await $api("/api/v1/auth/login", {
+        await $api("/auth/login", {
             method: "POST",
             body: credentials,
         });
 
-        organizations.value = await $api("/api/v1/auth/context", {
-            method: "GET",
-        });
+        organizations.value = await $api("/auth/context");
 
-        await callHook("auth:login");
+        await navigateTo("/auth/select");
     };
 
     const select = async (organization: any) => {
-        await $api("/api/v1/auth/context/select", {
+        await $api("/auth/context/select", {
             method: "POST",
             body: {
                 organizationId: organization.id,
             },
         });
 
-        await callHook("auth:select");
+        await navigateTo("/");
     };
 
     const current = async () => {
         try {
-            context.value = await $api("/api/v1/auth/context/current");
+            context.value = await $api("/auth/context/current");
         } catch {
             context.value = null;
         }
     };
 
     const logout = async () => {
-        await callHook("auth:logout");
+        await navigateTo("/auth/login", { replace: true });
 
-        await $api("/api/v1/auth/logout", {
+        await $api("/auth/logout", {
             method: "POST",
         });
+
+        clearNuxtData();
+        context.value = null;
+        organizations.value = null;
     };
 
     return {

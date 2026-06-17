@@ -24,13 +24,13 @@ fn connect(config: &str) -> BoxFuture<'_, ConnectionResult<AsyncPgConnection>> {
         use tokio_postgres::config::SslMode;
         use tokio_postgres_rustls_improved::MakeRustlsConnect;
 
-        let ca_file = fs::read("/certs/ca.crt").unwrap();
+        let ca_file = fs::read("../cockroach/certs/ca.crt").unwrap();
         let ca_certs = rustls_pemfile::certs(&mut BufReader::new(&ca_file[..]))
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
-        let cert_file = fs::read("/certs/client.dev.crt").unwrap();
-        let key_file = fs::read("/certs/client.dev.key").unwrap();
+        let cert_file = fs::read("../cockroach/certs/client.dev.crt").unwrap();
+        let key_file = fs::read("../cockroach/certs/client.dev.key").unwrap();
 
         let client_certs = rustls_pemfile::certs(&mut BufReader::new(&cert_file[..]))
             .collect::<Result<Vec<_>, _>>()

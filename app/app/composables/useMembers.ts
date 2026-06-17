@@ -1,11 +1,7 @@
 export const useMembers = async () => {
-    const { context } = useAuth();
-    const { data: members } = await useAPI(
-        `/api/v1/organizations/${context.value.organizationId}/members`,
-        {
-            key: "organization_members",
-        },
-    );
+    const { data: members } = await useContext("/members", {
+        key: "organization-members",
+    });
 
     return members;
 };

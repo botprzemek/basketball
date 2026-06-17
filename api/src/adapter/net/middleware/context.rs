@@ -21,8 +21,6 @@ pub async fn context_middleware(
     request: Request,
     next: Next,
 ) -> Result<Response, Response> {
-    println!("GET / {}", &request.uri());
-
     if actor.organization_id != params.organization_id {
         return Err(services.auth().logout(StatusCode::UNAUTHORIZED));
     }

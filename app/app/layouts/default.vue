@@ -1,6 +1,6 @@
 <template>
     <main
-        class="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#E8F1F2]"
+        class="relative flex min-h-screen justify-center overflow-hidden bg-[#E8F1F2]"
     >
         <aside
             class="pointer-events-none absolute inset-0 z-0 opacity-60"

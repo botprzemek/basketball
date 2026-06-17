@@ -6,8 +6,7 @@ use axum_extra::extract::CookieJar;
 use uuid::Uuid;
 
 use crate::adapter::services::{
-    AccountService, CookieService, IdentityService, PasswordService, TokenService,
-    token::AuthenticationState,
+    AccountService, CookieService, IdentityService, MemberService, PasswordService, TokenService, token::AuthenticationState
 };
 
 use crate::domain::{
@@ -18,10 +17,12 @@ use crate::domain::{
 
 pub struct AuthenticationService {
     cookie: CookieService,
+    token: TokenService,
     password: PasswordService,
+
     account: AccountService,
     identity: IdentityService,
-    token: TokenService,
+    member: MemberService,
 }
 
 const DUMMY_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$jtZakqCGyhTTEEPAvX5wFA$Vg9HqwADg/5cxFyOLH7PtPoArGPTolQ/+ZvPzlC9Td0";
@@ -33,13 +34,15 @@ impl AuthenticationService {
         password: PasswordService,
         account: AccountService,
         identity: IdentityService,
+        member: MemberService,
     ) -> Self {
         Self {
             cookie,
             password,
+            token,
             account,
             identity,
-            token,
+            member,
         }
     }
 
@@ -110,17 +113,17 @@ impl AuthenticationService {
     ) -> anyhow::Result<AuthenticationState> {
         match self.token.authenticate(token)? {
             Actor::Selection(actor) => {
-                let identity = match self
-                    .identity
-                    .find_by_self(actor.account_id, organization_id)
+                let member = match self
+                    .member
+                    .find_by_identity(organization_id, actor.account_id)
                     .await?
                 {
-                    Some(identity) => identity,
+                    Some(member) => member,
                     None => return Err(anyhow::anyhow!("Identity not found")),
                 };
 
                 self.token
-                    .issue_authentication(identity.account_id, identity.organization_id)
+                    .issue_authentication(member.id, member .organization_id)
             }
             Actor::Authorized(_) => Err(anyhow::anyhow!("Already logged in")),
         }

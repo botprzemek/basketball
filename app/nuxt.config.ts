@@ -11,14 +11,10 @@ export default defineNuxtConfig({
 
     modules: ["@nuxt/fonts"],
 
-    nitro: {
-        runtimeConfig: {
-            envPrefix: "AUTH_",
-        },
-    },
-
     runtimeConfig: {
-        apiUrl: "",
+        public: {
+            apiUrl: "",
+        },
         tokens: {
             identity: "identity-token",
             access: "access-token",

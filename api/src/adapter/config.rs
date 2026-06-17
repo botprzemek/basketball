@@ -3,7 +3,6 @@ use std::env::var;
 pub struct Config {
     server_host: String,
     server_port: u16,
-    server_base_url: String,
 
     token_issuer: String,
     token_secret: String,
@@ -41,7 +40,6 @@ impl Config {
     pub fn load() -> anyhow::Result<Self> {
         let server_host = var("API_SERVER_HOST")?;
         let server_port = var("API_SERVER_PORT")?.parse::<u16>()?;
-        let server_base_url = var("API_SERVER_BASE_URL")?;
 
         let token_issuer = var("API_TOKEN_ISSUER")?;
         let token_secret = var("API_TOKEN_SECRET")?;
@@ -59,7 +57,6 @@ impl Config {
         Ok(Config {
             server_host,
             server_port,
-            server_base_url,
 
             token_issuer,
             token_secret,

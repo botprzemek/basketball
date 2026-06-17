@@ -34,7 +34,7 @@ impl Gateway {
 
     pub fn with_auth(mut self) -> Self {
         self.router = self.router.nest(
-            "/api/v1/auth",
+            "/v1/auth",
             AuthenticationHandler::v1(self.services.clone()),
         );
 
@@ -45,7 +45,7 @@ impl Gateway {
         let middleware = middleware::from_fn_with_state(self.services.clone(), context_middleware);
 
         self.router = self.router.nest(
-            "/api/v1/organizations",
+            "/v1/organizations",
             OrganizationsHandler::v1(self.services.clone()).layer(middleware),
         );
 

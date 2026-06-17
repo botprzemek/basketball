@@ -6,11 +6,6 @@ use crate::domain::entities::{Identity, Organization};
 #[async_trait]
 pub trait IdentityPort: Clone + Send + Sync {
     async fn select(&self) -> anyhow::Result<Vec<Identity>>;
-    async fn select_by_self(
-        &self,
-        account_id: Uuid,
-        organization_id: Uuid,
-    ) -> anyhow::Result<Option<Identity>>;
     async fn select_by_account(
         &self,
         account_id: Uuid,

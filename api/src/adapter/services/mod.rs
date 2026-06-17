@@ -45,6 +45,7 @@ impl Services {
             PasswordService::new(),
             AccountApplication::new(registry.account.clone()),
             IdentityApplication::new(registry.identity.clone()),
+            MemberApplication::new(registry.member.clone()),
         );
 
         let organization = OrganizationApplication::new(registry.organization.clone());

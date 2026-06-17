@@ -1,17 +1,21 @@
 export default defineNuxtRouteMiddleware(async (_to, _from) => {
-    const { isLogged, isAuthenticated, current, logout } = useAuth();
+    const { $api } = useNuxtApp();
+    const { isAuthenticated, current } = useAuth();
 
-    if (!isLogged.value && isAuthenticated.value) {
-        return;
+    if (!isAuthenticated.value) {
+        await current();
     }
-
-    await current();
 
     if (isAuthenticated.value) {
-        await useOrganization();
         return;
     }
 
-    await logout();
-    return navigateTo("/auth/login");
+    await $api("/auth/logout", {
+        method: "POST",
+    });
+
+    clearNuxtData();
+    clearNuxtState(["auth-organizations", "auth-context"]);
+
+    return navigateTo("/auth/login", { replace: true });
 });
