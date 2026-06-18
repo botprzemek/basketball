@@ -9,7 +9,7 @@ services:
           - api
           - app
     volumes:
-      - .:/workspace/auth:cached
+      - .:/workspaces/auth:cached
     tty: true
     stdin_open: true
     command: /bin/bash

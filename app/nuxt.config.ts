@@ -9,16 +9,11 @@ export default defineNuxtConfig({
         },
     },
 
-    modules: ["@nuxt/fonts"],
+    modules: ["@nuxt/fonts", "@nuxt/ui"],
 
     runtimeConfig: {
         public: {
             apiUrl: "",
-        },
-        tokens: {
-            identity: "identity-token",
-            access: "access-token",
-            refresh: "refresh-token",
         },
     },
 

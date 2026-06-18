@@ -12,7 +12,7 @@
     "cache",
     "devcontainer"
   ],
-  "workspaceFolder": "/workspace/auth",
+  "workspaceFolder": "/workspaces/auth",
   "features": {
     "ghcr.io/devcontainers/features/node:2.0.0": {},
     "ghcr.io/devcontainers/features/rust:1": {}

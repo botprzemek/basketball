@@ -1,5 +1,6 @@
 export const useAuth = () => {
     const { $api } = useNuxtApp();
+
     const organizations = useState<any | null>(
         "auth-organizations",
         () => null,
@@ -21,14 +22,18 @@ export const useAuth = () => {
     };
 
     const select = async (organization: any) => {
-        await $api("/auth/context/select", {
-            method: "POST",
-            body: {
-                organizationId: organization.id,
-            },
-        });
+        try {
+            await $api("/auth/context/select", {
+                method: "POST",
+                body: {
+                    organizationId: organization.id,
+                },
+            });
 
-        await navigateTo("/");
+            await navigateTo("/");
+        } catch {
+            await logout();
+        }
     };
 
     const current = async () => {
