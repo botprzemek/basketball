@@ -17,9 +17,7 @@
         "lint:github": "oxlint --format=github",
         "precommit": "oxfmt --write && oxlint --deny-warnings"
     },
-    "dependencies": {
-        "@nuxt/fonts": "0.14.0",
-        "@nuxt/ui": "^4.9.0",
+    "devDependencies": {
         "@tailwindcss/vite": "4.3.0",
         "nuxt": "4.4.6",
         "oxfmt": "0.52.0",

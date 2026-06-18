@@ -15,7 +15,7 @@ const { organizations, select, logout } = useAuth();
                 v-for="{ organization, joinedAt } in organizations"
                 :key="organization.id"
             >
-                <button @click.prevent="select(organization)">
+                <button @click.prevent="select(organization.id)">
                     [{{ organization.name }}] -
                     {{ new Date(joinedAt).toLocaleDateString("pl-PL") }}
                 </button>

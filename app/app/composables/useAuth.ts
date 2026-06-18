@@ -10,7 +10,7 @@ export const useAuth = () => {
     const isLogged = computed(() => !!organizations.value);
     const isAuthenticated = computed(() => !!context.value);
 
-    const login = async (credentials: LoginCredentials) => {
+    const login = async (credentials: any) => {
         await $api("/auth/login", {
             method: "POST",
             body: credentials,
@@ -21,12 +21,12 @@ export const useAuth = () => {
         await navigateTo("/auth/select");
     };
 
-    const select = async (organization: any) => {
+    const select = async (organizationId: any) => {
         try {
             await $api("/auth/context/select", {
                 method: "POST",
                 body: {
-                    organizationId: organization.id,
+                    organizationId,
                 },
             });
 

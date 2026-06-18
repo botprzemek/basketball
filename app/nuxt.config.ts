@@ -9,8 +9,6 @@ export default defineNuxtConfig({
         },
     },
 
-    modules: ["@nuxt/fonts", "@nuxt/ui"],
-
     runtimeConfig: {
         public: {
             apiUrl: "",

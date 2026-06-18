@@ -1,0 +1,138 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
+use uuid::Uuid;
+
+use crate::{providers::PostgresProvider, repositories::accounts::dsl::*};
+use api_domain::{entities::Account, ports::AccountPort};
+
+#[derive(Clone)]
+pub struct AccountRepository {
+    provider: Arc<PostgresProvider>,
+}
+
+#[derive(Debug, Clone, Queryable, Selectable, Insertable, Identifiable, AsChangeset)]
+#[diesel(table_name = crate::repositories::accounts)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct AccountRow {
+    pub id: Uuid,
+    pub email: String,
+    pub password_hash: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+impl From<AccountRow> for Account {
+    fn from(account: AccountRow) -> Self {
+        Self {
+            id: account.id,
+            email: account.email,
+            password_hash: account.password_hash,
+            first_name: account.first_name,
+            last_name: account.last_name,
+            is_active: account.is_active,
+            created_at: account.created_at,
+            updated_at: account.updated_at,
+        }
+    }
+}
+
+impl From<Account> for AccountRow {
+    fn from(account: Account) -> Self {
+        Self {
+            id: account.id,
+            email: account.email,
+            password_hash: account.password_hash,
+            first_name: account.first_name,
+            last_name: account.last_name,
+            is_active: account.is_active,
+            created_at: account.created_at,
+            updated_at: account.updated_at,
+        }
+    }
+}
+
+impl AccountRepository {
+    pub fn new(provider: Arc<PostgresProvider>) -> Self {
+        Self { provider }
+    }
+}
+
+#[async_trait]
+impl AccountPort for AccountRepository {
+    async fn select(&self) -> anyhow::Result<Vec<Account>> {
+        let connection = &mut self.provider.get().await?;
+        let results = accounts
+            .select(AccountRow::as_select())
+            .get_results::<AccountRow>(connection)
+            .await?
+            .into_iter()
+            .map(Account::from)
+            .collect::<Vec<_>>();
+
+        Ok(results)
+    }
+
+    async fn select_by_self(&self, self_id: Uuid) -> anyhow::Result<Option<Account>> {
+        let connection = &mut self.provider.get().await?;
+        let result = accounts
+            .select(AccountRow::as_select())
+            .filter(id.eq(self_id))
+            .first(connection)
+            .await
+            .optional()?
+            .map(Account::from);
+
+        Ok(result)
+    }
+
+    async fn select_by_email(&self, self_email: String) -> anyhow::Result<Option<Account>> {
+        let connection = &mut self.provider.get().await?;
+        let result = accounts
+            .select(AccountRow::as_select())
+            .filter(email.eq(self_email))
+            .first(connection)
+            .await
+            .optional()?
+            .map(Account::from);
+
+        Ok(result)
+    }
+
+    async fn insert(&self, account: Account) -> anyhow::Result<Account> {
+        println!(
+            "user:{};password_hash:{}",
+            &account.email, &account.password_hash
+        );
+
+        let connection = &mut self.provider.get().await?;
+        let result = diesel::insert_into(accounts)
+            .values(AccountRow::from(account))
+            .get_result::<AccountRow>(connection)
+            .await
+            .map(Account::from)?;
+
+        Ok(result)
+    }
+
+    async fn update(&self, account: Account) -> anyhow::Result<Account> {
+        let _connection = &mut self.provider.get().await?;
+
+        Ok(account)
+    }
+
+    async fn delete(&self, self_id: Uuid) -> anyhow::Result<()> {
+        let connection = &mut self.provider.get().await?;
+        let _result = diesel::delete(accounts.filter(id.eq(self_id)))
+            .execute(connection)
+            .await?;
+
+        Ok(())
+    }
+}
