@@ -5,7 +5,7 @@
     font-family: "IBM Plex Mono";
     font-style: normal;
     font-weight: 400;
-    src: url("fonts/ibm-plex-mono-v20-latin-regular.woff2") format("woff2");
+    src: url("/fonts/ibm-plex-mono-v20-latin-regular.woff2") format("woff2");
 }
 
 @theme {

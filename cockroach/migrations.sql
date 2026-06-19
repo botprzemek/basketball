@@ -15,11 +15,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT SELECT, INSERT, UPDATE, DELETE ON 
 CREATE TABLE IF NOT EXISTS auth.accounts (
     id UUID PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
-    email_verified BOOLEAN NOT NULL DEFAULT false,
     password_hash TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ,
+    verified_at TIMESTAMPTZ
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_email 
@@ -63,13 +63,13 @@ CREATE TABLE IF NOT EXISTS auth.members (
     family_name TEXT NOT NULL,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
-    email_verified BOOLEAN NOT NULL DEFAULT false,
     phone_number TEXT NOT NULL,
-    gender INTEGER,
-    birthdate DATE,
+    gender INTEGER NOT NULL DEFAULT 0,
+    birthdate DATE NOT NULL,
     picture TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
+    verified_at TIMESTAMPTZ,
 
     PRIMARY KEY (account_id, organization_id)
 );
@@ -263,9 +263,9 @@ CREATE TABLE IF NOT EXISTS auth.roles_permissions (
     PRIMARY KEY (permission_id, role_id, organization_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_members_roles_role_id
+CREATE INDEX IF NOT EXISTS idx_roles_permissions_role_id
     ON auth.roles_permissions(role_id);
-CREATE INDEX IF NOT EXISTS idx_members_roles_organization_id 
+CREATE INDEX IF NOT EXISTS idx_roles_permissions_organization_id 
     ON auth.roles_permissions(organization_id);
 
 ALTER TABLE auth.roles_permissions ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;

@@ -11,13 +11,13 @@ TRUNCATE auth.members CASCADE;
 TRUNCATE auth.organizations CASCADE;
 TRUNCATE auth.accounts CASCADE;
 
-INSERT INTO auth.accounts (id, email, password_hash, email_verified)
+INSERT INTO auth.accounts (id, email, password_hash, verified_at)
 VALUES
     (
         'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         'v@nightcity.net',
         '$argon2id$v=19$m=19456,t=2,p=1$eo4MYfvcPV93Xh3r8ErGsQ$C7dFh9TPVNU0XZkusoF1/uyO0vvZULabJuDJinJu4EI',
-        true
+        now()
     )
 ON CONFLICT (id) DO NOTHING;
 
@@ -37,22 +37,24 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO auth.members (
     account_id, organization_id, given_name, family_name, name, 
-    email, email_verified, phone_number, gender, birthdate, picture
+    email, phone_number, gender, birthdate, picture, verified_at
 )
 VALUES
     (
         'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         'b2bc3456-1234-5678-90ab-cdef12345678',
         'Vincent', 'Wilson', 'Vincent Wilson',
-        'v.wilson@arasaka.co', true, '+12025550143', 1, '2054-12-10', 
-        'https://api.dicebear.com/7.x/bottts/svg?seed=v-arasaka'
+        'v.wilson@arasaka.co', '+12025550143', 1, '2054-12-10', 
+        'https://api.dicebear.com/7.x/bottts/svg?seed=v-arasaka',
+        now()
     ),
     (
         'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         'c3cd4567-2345-6789-01bc-defa23456789',
         'Vincent', 'Wilson', 'Vincent Wilson',
-        'v.wilson@militech.com', true, '+12025550199', 1, '2054-12-10', 
-        'https://api.dicebear.com/7.x/bottts/svg?seed=v-militech'
+        'v.wilson@militech.com', '+12025550199', 1, '2054-12-10', 
+        'https://api.dicebear.com/7.x/bottts/svg?seed=v-militech',
+        now()
     )
 ON CONFLICT (account_id, organization_id) DO NOTHING;
 
