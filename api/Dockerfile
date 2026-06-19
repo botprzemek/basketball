@@ -5,21 +5,21 @@ WORKDIR /app
 COPY --chown=nonroot:nonroot Cargo.toml Cargo.lock ./
 
 RUN mkdir src
-RUN echo "fn main() {}" > src/main.rs
+RUN echo "fn main() { println!(\"hello_world\")}" > src/main.rs
 RUN cargo build --release
 
-COPY --chown=nonroot:nonroot . .
+COPY --chown=nonroot:nonroot ./src ./src
 
-RUN cargo build --release --bin api_core
+RUN cargo build --release --bin auth-api
 
 
 
-FROM cgr.dev/chainguard/glibc-dynamic AS runner
+FROM ubuntu AS runner
 
 WORKDIR /app
 
-COPY --from=builder --chown=nonroot:nonroot /app/target/release/api_core /usr/local/bin/api_core
+COPY --from=builder --chown=nonroot:nonroot /app/target/release/auth-api /usr/local/bin/auth-api
 
 EXPOSE 3000
 
-CMD ["/usr/local/bin/api_core"]
+CMD ["/usr/local/bin/auth-api"]

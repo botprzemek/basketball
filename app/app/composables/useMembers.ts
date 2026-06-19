@@ -1,5 +1,5 @@
 export const useMembers = async () => {
-    const { data: members } = await useContext("/members", {
+    const { data: members } = await useContext<Array<Member>>("/members", {
         key: "organization-members",
     });
 

@@ -23,18 +23,20 @@ services:
   database-1:
     <<: *db-common
     container_name: auth-database-1
-    command: start --certs-dir=certs --listen-addr=auth-database-1:26357 --sql-addr=auth-database-1:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
+    command: start --insecure --listen-addr=auth-database-1:26357 --sql-addr=auth-database-1:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
+    # command: start --certs-dir=certs --listen-addr=auth-database-1:26357 --sql-addr=auth-database-1:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
     volumes:
       - database-1:/cockroach/cockroach-data
-      - ./cockroach/certs:/cockroach/certs:ro
+      # - ./cockroach/certs:/cockroach/certs:ro
 
   database-2:
     <<: *db-common
     container_name: auth-database-2
-    command: start --certs-dir=certs --listen-addr=auth-database-2:26357 --sql-addr=auth-database-2:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
+    command: start --insecure --listen-addr=auth-database-2:26357 --sql-addr=auth-database-2:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
+    # command: start --certs-dir=certs --listen-addr=auth-database-2:26357 --sql-addr=auth-database-2:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
     volumes:
       - database-2:/cockroach/cockroach-data
-      - ./cockroach/certs:/cockroach/certs:ro
+      # - ./cockroach/certs:/cockroach/certs:ro
     depends_on:
       database-1:
         condition: service_started
@@ -42,10 +44,11 @@ services:
   database-3:
     <<: *db-common
     container_name: auth-database-3
-    command: start --certs-dir=certs --listen-addr=auth-database-3:26357 --sql-addr=auth-database-3:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
+    command: start --insecure --listen-addr=auth-database-3:26357 --sql-addr=auth-database-3:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
+    # command: start --certs-dir=certs --listen-addr=auth-database-3:26357 --sql-addr=auth-database-3:26257 --join=auth-database-1:26357,auth-database-2:26357,auth-database-3:26357
     volumes:
       - database-3:/cockroach/cockroach-data
-      - ./cockroach/certs:/cockroach/certs:ro
+      # - ./cockroach/certs:/cockroach/certs:ro
     depends_on:
       database-2:
         condition: service_started
@@ -53,11 +56,12 @@ services:
   init-cluster:
     image: "cockroachdb/cockroach:latest-v26.2"
     container_name: auth-database-init
-    command: init --certs-dir=certs
+    command: init --insecure
+    # command: init --certs-dir=certs
     networks:
       auth:
-    volumes:
-      - ./cockroach/certs:/cockroach/certs:ro
+    # volumes:
+      # - ./cockroach/certs:/cockroach/certs:ro
     depends_on:
       database-1:
         condition: service_started
@@ -67,11 +71,12 @@ services:
   migrate-cluster:
     image: "cockroachdb/cockroach:latest-v26.2"
     container_name: auth-database-migrate
-    command: sql --certs-dir=certs --file "/cockroach/migrations.sql"
+    command: sql --insecure --file "/cockroach/migrations.sql"
+    # command: sql --certs-dir=certs --file "/cockroach/migrations.sql"
     networks:
       auth:
     volumes:
-      - ./cockroach/certs:/cockroach/certs:ro
+      # - ./cockroach/certs:/cockroach/certs:ro
       - ./cockroach/migrations.sql:/cockroach/migrations.sql:ro
     depends_on:
       database-1:
@@ -82,11 +87,12 @@ services:
   seed-cluster:
     image: "cockroachdb/cockroach:latest-v26.2"
     container_name: auth-database-seed
-    command: sql --certs-dir=certs --file "/cockroach/seeding.sql"
+    command: sql --insecure --user dev --file "/cockroach/seeding.sql"
+    # command: sql --certs-dir=certs --file "/cockroach/seeding.sql"
     networks:
       auth:
     volumes:
-      - ./cockroach/certs:/cockroach/certs:ro
+      # - ./cockroach/certs:/cockroach/certs:ro
       - ./cockroach/seeding.sql:/cockroach/seeding.sql:ro
     depends_on:
       database-1:
@@ -117,8 +123,8 @@ services:
     container_name: auth-api
     networks:
       auth:
-    volumes:
-      - ./cockroach/certs:/certs:ro
+    # volumes:
+    #   - ./cockroach/certs:/certs:ro
     depends_on:
       cache:
         condition: service_started

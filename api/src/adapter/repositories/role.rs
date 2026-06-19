@@ -80,7 +80,6 @@ impl RolePort for RoleRepository {
                         .await?;
 
                     roles::table
-                        .distinct()
                         .select(RoleRow::as_select())
                         .get_results::<RoleRow>(conn)
                         .await
@@ -108,13 +107,17 @@ impl RolePort for RoleRepository {
                 async move {
                     diesel::sql_query("RESET ALL").execute(conn).await?;
 
+                    diesel::sql_query("SET auth.account_id = $1")
+                        .bind::<diesel::sql_types::Uuid, _>(self_account_id)
+                        .execute(conn)
+                        .await?;
+
                     diesel::sql_query("SET auth.organization_id = $1")
                         .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
                         .execute(conn)
                         .await?;
 
                     members_roles::table
-                        .distinct()
                         .inner_join(roles::table)
                         .select(RoleRow::as_select())
                         .get_results::<RoleRow>(conn)

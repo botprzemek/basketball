@@ -77,11 +77,6 @@ impl AccountPort for AccountRepository {
     }
 
     async fn insert(&self, account: Account) -> anyhow::Result<Account> {
-        println!(
-            "user:{};password_hash:{}",
-            &account.email, &account.password_hash
-        );
-
         let connection = &mut self.provider.get().await?;
         let result = diesel::insert_into(accounts)
             .values(AccountRow::from(account))

@@ -1,19 +1,23 @@
-mod adapter;
-mod core;
-mod domain;
+// mod adapter;
+// mod core;
+// mod domain;
 
-use core::CoreBuilder;
+// use core::CoreBuilder;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let core = CoreBuilder::new()?
-        .registry()
-        .await?
-        .services()
-        .await?
-        .gateway()
-        .await?
-        .build()?;
+// #[tokio::main]
+// async fn main() -> anyhow::Result<()> {
+//     let core = CoreBuilder::new()?
+//         .registry()
+//         .await?
+//         .services()
+//         .await?
+//         .gateway()
+//         .await?
+//         .build()?;
 
-    core.run().await
+//     core.run().await
+// }
+
+fn main() {
+    println!("Dzialam!");
 }

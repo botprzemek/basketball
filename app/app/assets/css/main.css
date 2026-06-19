@@ -11,3 +11,9 @@
 @theme {
     --font-sans: "IBM Plex Mono", "sans-serif";
 }
+
+@layer base {
+    body {
+        @apply bg-white;
+    }
+}

@@ -1,5 +1,5 @@
 export const useRoles = async () => {
-    const { data: roles } = await useContext("/roles", {
+    const { data: roles } = await useContext<Array<Role>>("/roles", {
         key: "organization-roles",
     });
 

@@ -6,7 +6,9 @@ USE dev;
 
 CREATE SCHEMA IF NOT EXISTS auth;
 
-CREATE USER IF NOT EXISTS dev WITH PASSWORD 'your-password';
+DROP USER IF EXISTS dev;
+
+CREATE USER IF NOT EXISTS dev WITH PASSWORD NULL; --'your-password';
 
 GRANT USAGE ON SCHEMA auth TO dev;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA auth TO dev;
@@ -14,8 +16,10 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT SELECT, INSERT, UPDATE, DELETE ON 
 
 CREATE TABLE IF NOT EXISTS auth.accounts (
     id UUID PRIMARY KEY,
+
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
     deleted_at TIMESTAMPTZ,
@@ -28,8 +32,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_email
 
 CREATE TABLE IF NOT EXISTS auth.organizations (
     id UUID PRIMARY KEY,
+
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
     deleted_at TIMESTAMPTZ
@@ -59,14 +65,16 @@ CREATE POLICY auth_mfa_isolation_policy ON auth.mfa_methods
 CREATE TABLE IF NOT EXISTS auth.members (
     account_id UUID NOT NULL REFERENCES auth.accounts(id) ON DELETE CASCADE,
     organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+
     given_name TEXT NOT NULL,
     family_name TEXT NOT NULL,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     phone_number TEXT NOT NULL,
-    gender INTEGER NOT NULL DEFAULT 0,
+    gender INT4 NOT NULL DEFAULT 0,
     birthdate DATE NOT NULL,
     picture TEXT NOT NULL,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
     verified_at TIMESTAMPTZ,
@@ -83,22 +91,42 @@ CREATE POLICY auth_members_isolation_policy
     ON auth.members
     AS PERMISSIVE
     FOR ALL
-    USING (
-        organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID
-        OR 
-        account_id = NULLIF(current_setting('auth.account_id', true), '')::UUID
+USING (
+        (NULLIF(current_setting('auth.organization_id', true), '')::UUID IS NOT NULL 
+         OR NULLIF(current_setting('auth.account_id', true), '')::UUID IS NOT NULL)
+        
+        AND
+        
+        (organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID 
+         OR NULLIF(current_setting('auth.organization_id', true), '')::UUID IS NULL)
+        
+        AND
+        
+        (account_id = NULLIF(current_setting('auth.account_id', true), '')::UUID 
+         OR NULLIF(current_setting('auth.account_id', true), '')::UUID IS NULL)
     )
     WITH CHECK (
-        organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID
-        OR 
-        account_id = NULLIF(current_setting('auth.account_id', true), '')::UUID
+        (NULLIF(current_setting('auth.organization_id', true), '')::UUID IS NOT NULL 
+         OR NULLIF(current_setting('auth.account_id', true), '')::UUID IS NOT NULL)
+        
+        AND
+
+        (organization_id = NULLIF(current_setting('auth.organization_id', true), '')::UUID 
+         OR NULLIF(current_setting('auth.organization_id', true), '')::UUID IS NULL)
+        
+        AND
+
+        (account_id = NULLIF(current_setting('auth.account_id', true), '')::UUID 
+         OR NULLIF(current_setting('auth.account_id', true), '')::UUID IS NULL)
     );
 
 CREATE TABLE IF NOT EXISTS auth.groups (
     id UUID PRIMARY KEY,
     organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+
     name TEXT NOT NULL,
     description TEXT NOT NULL,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
     deleted_at TIMESTAMPTZ,
@@ -160,8 +188,10 @@ CREATE POLICY auth_members_groups_isolation_policy
 CREATE TABLE IF NOT EXISTS auth.roles (
     id UUID PRIMARY KEY,
     organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+
     name TEXT NOT NULL,
     description TEXT NOT NULL,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
     deleted_at TIMESTAMPTZ,
@@ -223,9 +253,11 @@ CREATE POLICY auth_members_roles_isolation_policy
 CREATE TABLE IF NOT EXISTS auth.permissions (
     id UUID PRIMARY KEY,
     organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+
     scope TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT NOT NULL,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
     deleted_at TIMESTAMPTZ,

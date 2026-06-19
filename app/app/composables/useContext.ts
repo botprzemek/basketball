@@ -4,10 +4,13 @@ export const useContext = <T>(
     url: string | (() => string),
     options: UseFetchOptions<T> = {},
 ) => {
-    const { context } = useAuth();
+    const { contextCurrent } = useAuth();
 
-    return useFetch(`/organizations/${context.value.organizationId}${url}`, {
-        ...options,
-        $fetch: useNuxtApp().$api,
-    });
+    return useFetch(
+        `/organizations/${contextCurrent.value!.organizationId}${url}`,
+        {
+            ...options,
+            $fetch: useNuxtApp().$api,
+        },
+    );
 };

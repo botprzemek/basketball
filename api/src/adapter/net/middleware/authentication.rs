@@ -21,8 +21,11 @@ where
         let services = Arc::<Services>::from_ref(state);
         let cookies = CookieJar::from_headers(&parts.headers);
 
+        parts.headers.clone().into_iter().for_each(|(key, value)| println!("{:#?} : {:#?}", key, value));
+
         let token = match services.auth().get_access_token(&cookies) {
             Some(token) => token,
+            // TODO - Refresh token when only refresh-token is accessible
             None => return Err(services.auth().logout(StatusCode::UNAUTHORIZED)),
         };
 

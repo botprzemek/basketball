@@ -2,10 +2,6 @@
 definePageMeta({ middleware: ["auth-context"] });
 
 const { logout } = useAuth();
-
-const organization = await useOrganization();
-const members = await useMembers();
-const roles = await useRoles();
 </script>
 
 <template>
@@ -14,17 +10,8 @@ const roles = await useRoles();
             <button @click.prevent="logout()">Logout</button>
         </aside>
 
-        Organization
-        <h1>{{ organization }}</h1>
-
-        <div>
-            Members
-            <p v-for="member in members">{{ member }}</p>
-        </div>
-
-        <div>
-            Roles
-            <p v-for="role in roles">{{ role }}</p>
-        </div>
+        <OrganizationDetails />
+        <OrganizationMembers />
+        <OrganizationRoles />
     </main>
 </template>

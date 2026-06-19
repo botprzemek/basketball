@@ -86,7 +86,6 @@ impl MemberPort for MemberRepository {
                         .await?;
 
                     members::table
-                        .distinct()
                         .select(MemberRow::as_select())
                         .get_results::<MemberRow>(conn)
                         .await
@@ -118,14 +117,6 @@ impl MemberPort for MemberRepository {
                         .execute(conn)
                         .await?;
 
-                    let test = members::table
-                        .inner_join(organizations::table)
-                        .select(MemberRow::as_select())
-                        .get_results::<MemberRow>(conn)
-                        .await?;
-
-                    test.into_iter().for_each(|t| println!("{}", t.gender));
-
                     members::table
                         .inner_join(organizations::table)
                         .select((MemberRow::as_select(), OrganizationRow::as_select()))
@@ -138,11 +129,7 @@ impl MemberPort for MemberRepository {
 
         let results = rows
             .into_iter()
-            .map(|(member, organization)| {
-                println!("gender: {}", member.gender);
-
-                (Member::from(member), Organization::from(organization))
-            })
+            .map(|(member, organization)| (Member::from(member), Organization::from(organization)))
             .collect::<_>();
 
         Ok(results)
@@ -162,18 +149,17 @@ impl MemberPort for MemberRepository {
                 async move {
                     diesel::sql_query("RESET ALL").execute(conn).await?;
 
-                    diesel::sql_query("SET auth.organization_id = $1")
-                        .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
-                        .execute(conn)
-                        .await?;
-
                     diesel::sql_query("SET auth.account_id = $1")
                         .bind::<diesel::sql_types::Uuid, _>(self_account_id)
                         .execute(conn)
                         .await?;
 
+                    diesel::sql_query("SET auth.organization_id = $1")
+                        .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
+                        .execute(conn)
+                        .await?;
+
                     members::table
-                        .distinct()
                         .inner_join(accounts::table)
                         .select(MemberRow::as_select())
                         .first::<MemberRow>(conn)

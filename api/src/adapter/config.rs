@@ -90,16 +90,6 @@ impl DatabaseConfig for Config {
             self.database_port,
             self.database_name,
         )
-        // format!(
-        //     "postgresql://{}:{}@{}:{}/{}?sslmode=verify-full&sslcert=/workspace/auth/cockroach/certs/client.{}.crt&sslkey=/workspace/auth/cockroach/certs/client.{}.key&sslrootcert=/workspace/auth/cockroach/certs/ca.crt",
-        //     self.database_username,
-        //     self.database_password,
-        //     self.database_host,
-        //     self.database_port,
-        //     self.database_name,
-        //     self.database_username,
-        //     self.database_username
-        // )
     }
 }
 

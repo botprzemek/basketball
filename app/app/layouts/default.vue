@@ -1,3 +1,7 @@
+<script setup lang="ts">
+const { logout } = useAuth();
+</script>
+
 <template>
     <aside
         class="pointer-events-none absolute inset-0 z-0 opacity-60"
@@ -18,6 +22,10 @@
             background-size: 120px 120px;
         "
     ></aside>
+
+    <aside class="absolute top-0 z-100">
+        <button @click.prevent="logout()">Logout</button>
+    </aside>
 
     <main class="relative z-1 flex min-h-screen justify-center overflow-hidden">
         <slot />
