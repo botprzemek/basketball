@@ -1,14 +1,11 @@
-# auth-chart/templates/init-jobs.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: database-sql-scripts
 data:
   migrations.sql: |
-    -- Twój schemat bazy (CREATE SCHEMA IF NOT EXISTS auth; itd.)
     CREATE SCHEMA IF NOT EXISTS auth;
   seeding.sql: |
-    -- Twoje cyber-role (INSERT INTO auth.roles... itp.)
     SELECT 1;
 ---
 apiVersion: batch/v1
@@ -16,12 +13,13 @@ kind: Job
 metadata:
   name: auth-database-bootstrap
 spec:
+  ttlSecondsAfterFinished: 600
   template:
     spec:
       restartPolicy: OnFailure
       initContainers:
         - name: cluster-init
-          image: { { .Values.database.image } }
+          image: {{ .Values.database.image }}
           command:
             [
               "/cockroach/cockroach",
@@ -30,7 +28,7 @@ spec:
               "--host=auth-database-0.auth-database:26357",
             ]
         - name: cluster-migrate
-          image: { { .Values.database.image } }
+          image: {{ .Values.database.image }}
           command:
             [
               "sh",
@@ -40,32 +38,9 @@ spec:
           volumeMounts:
             - name: sql-volume
               mountPath: /scripts
-              - name: cluster-creator
-          image: {{ .Values.cache.image }}
-          command:
-            - "sh"
-            - "-c"
-            - |
-              echo "Czekam aż pody Valkey będą gotowe..."
-              # Pętla sprawdza, czy ostatni pod (auth-cache-5) odpowiada na sieci
-              until nc -z auth-cache-5.auth-cache-headless 6379; do
-                sleep 2
-              done
-
-              echo "Pody wstały. Pobieram IP wszystkich podów..."
-              # Pobieramy adresy IP podów na podstawie wewnętrznego DNS K8s
-              IPS=""
-              for i in 0 1 2 3 4 5; do
-                IP=$(getent hosts auth-cache-$i.auth-cache-headless | awk '{ print $1 }')
-                IPS="$IPS $IP:6379"
-              done
-
-              echo "Uruchamiam tworzenie klastra z IP: $IPS"
-              # Komenda automatycznie tworzy klaster i paruje Mastery z replikami (--cluster-replicas 1)
-              echo "yes" | valkey-cli --cluster create $IPS --cluster-replicas 1
-        containers:
+      containers:
         - name: cluster-seed
-          image: { { .Values.database.image } }
+          image: {{ .Values.database.image }}
           command:
             [
               "sh",
@@ -79,3 +54,34 @@ spec:
         - name: sql-volume
           configMap:
             name: database-sql-scripts
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: auth-cache-bootstrap
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: cluster-creator
+          image: {{ .Values.cache.image }}
+          command:
+            - "sh"
+            - "-c"
+            - |
+              echo "Czekam aż pody Valkey będą gotowe..."
+              until nc -z auth-cache-5.auth-cache-headless 6379; do
+                sleep 2
+              done
+
+              echo "Pody wstały. Pobieram IP wszystkich podów..."
+              IPS=""
+              for i in 0 1 2 3 4 5; do
+                IP=$(getent hosts auth-cache-$i.auth-cache-headless | awk '{ print $1 }')
+                IPS="$IPS $IP:6379"
+              done
+
+              echo "Uruchamiam tworzenie klastra z IP: $IPS"
+              echo "yes" | valkey-cli --cluster create $IPS --cluster-replicas 1

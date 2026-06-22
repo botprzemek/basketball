@@ -1,6 +1,7 @@
 use uuid::Uuid;
 
-use crate::domain::{entities::Role, ports::RolePort};
+use crate::domain::entities::Role;
+use crate::domain::ports::RolePort;
 
 pub struct RoleApplication<O: RolePort> {
     role_service: O,
@@ -21,7 +22,7 @@ impl<O: RolePort> RoleApplication<O> {
         account_id: Uuid,
     ) -> anyhow::Result<Vec<Role>> {
         self.role_service
-            .select_by_identity(organization_id, account_id)
+            .select_by_member(organization_id, account_id)
             .await
     }
 }

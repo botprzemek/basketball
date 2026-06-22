@@ -1,25 +1,39 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ["auth-select"] });
 
-const { organizations, select, logout } = useAuth();
+const { contextOrganizations, select } = useAuth();
 </script>
 
 <template>
-    <form>
-        <aside class="absolute top-0">
-            <button @click.prevent="logout()">Logout</button>
-        </aside>
+    <div>
+        <div>
+            <span>Context</span>
+            <h2>Choose a organization</h2>
+        </div>
 
-        <ul>
-            <li
-                v-for="{ organization, joinedAt } in organizations"
-                :key="organization.id"
-            >
-                <button @click.prevent="select(organization)">
-                    [{{ organization.name }}] -
-                    {{ new Date(joinedAt).toLocaleDateString("pl-PL") }}
-                </button>
-            </li>
-        </ul>
-    </form>
+        <form>
+            <ul>
+                <li
+                    v-for="context in contextOrganizations"
+                    :key="context.organization.id"
+                >
+                    <button @click.prevent="select(context)">
+                        <div>
+                            <span>
+                                {{ context.organization.name }}
+                            </span>
+                            <div>
+                                Agent -
+                                <span>{{ context.member.name }}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span> @{{ context.organization.slug }} </span>
+                        </div>
+                    </button>
+                </li>
+            </ul>
+        </form>
+    </div>
 </template>

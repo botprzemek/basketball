@@ -18,14 +18,14 @@ use axum::{
 
 use crate::adapter::Services;
 
-use crate::domain::entities::AuthenticatedActor;
+use crate::adapter::net::AuthenticationActor;
 
 pub struct OrganizationsHandler;
 
 impl OrganizationsHandler {
     async fn organization_by_id(
         State(services): State<Arc<Services>>,
-        actor: AuthenticatedActor,
+        actor: AuthenticationActor,
     ) -> Response {
         let organization = match services
             .organization()

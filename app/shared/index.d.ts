@@ -1,34 +1,69 @@
-interface RegisterCredentials {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
+interface LoginEvent {
+    email: string;
+    password: string;
 }
 
-interface LoginCredentials {
-  email: string;
-  password: string;
+interface ContextOrganization {
+    organization: Organization;
+    member: Member;
 }
 
-interface AccountIdentity {
-  identityId: string;
-  organizationId: string;
-  organizationName: string;
-  organizationSlug: string;
-  createdAt: Date;
-  updatedAt?: Date;
+interface ContextSelectEvent {
+    organization: Organization;
+}
+
+interface ContextCurrent {
+    organizationId: string;
+    accountId: string;
 }
 
 interface Organization {
-  id: string;
-  name: string;
-  slug: string;
+    id: string;
+
+    name: string;
+    slug: string;
+
+    createdAt: string;
+    updatedAt: string | null;
+    deletedAt: string | null;
 }
 
 interface Member {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  joinedAt: Date;
+    accountId: string;
+    organizationId: string;
+
+    givenName: string;
+    familyName: string;
+    name: string;
+    email: string;
+    phoneNumber: string;
+    gender: number;
+    birthdate: string;
+    picture: string;
+
+    createdAt: string;
+    updatedAt: string | null;
+    verifiedAt: string | null;
+}
+
+interface Group {
+    id: string;
+    organizationId: string;
+
+    name: string;
+    description: string;
+
+    createdAt: string;
+    updatedAt: string | null;
+}
+
+interface Role {
+    id: string;
+    organizationId: string;
+
+    name: string;
+    description: string;
+
+    createdAt: string;
+    updatedAt: string | null;
 }

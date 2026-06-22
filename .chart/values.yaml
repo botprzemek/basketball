@@ -3,8 +3,12 @@ global:
 
 database:
   replicas: 3
-  image: "cockroachdb/cockroach:latest-v26.1"
+  image: "cockroachdb/cockroach:latest-v26.2"
   storageSize: 10Gi
+  credentials:
+    database: "dev"
+    username: "dev"
+    password: "your-password"
 
 cache:
   image: "valkey/valkey:9.0-alpine"
@@ -12,13 +16,14 @@ cache:
   storageSize: 2Gi
 
 api:
-  replicas: 2
+  replicas: 3
   image: "auth/api:0.1.0"
-  service:
-    port: 3000
+  port: 3000
+  token:
+    issuer: "auth"
+    secret: "your-secret"
 
 app:
-  replicas: 2
+  replicas: 3
   image: "auth/app:0.1.0"
-  service:
-    port: 3001
+  port: 3001

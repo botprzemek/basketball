@@ -21,11 +21,10 @@ pub struct AccountRow {
     pub id: Uuid,
     pub email: String,
     pub password_hash: String,
-    pub first_name: String,
-    pub last_name: String,
-    pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub verified_at: Option<DateTime<Utc>>,
 }
 
 impl From<AccountRow> for Account {
@@ -34,11 +33,10 @@ impl From<AccountRow> for Account {
             id: account.id,
             email: account.email,
             password_hash: account.password_hash,
-            first_name: account.first_name,
-            last_name: account.last_name,
-            is_active: account.is_active,
             created_at: account.created_at,
             updated_at: account.updated_at,
+            deleted_at: account.deleted_at,
+            verified_at: account.verified_at,
         }
     }
 }
@@ -49,11 +47,10 @@ impl From<Account> for AccountRow {
             id: account.id,
             email: account.email,
             password_hash: account.password_hash,
-            first_name: account.first_name,
-            last_name: account.last_name,
-            is_active: account.is_active,
             created_at: account.created_at,
             updated_at: account.updated_at,
+            deleted_at: account.deleted_at,
+            verified_at: account.verified_at,
         }
     }
 }
@@ -66,32 +63,6 @@ impl AccountRepository {
 
 #[async_trait]
 impl AccountPort for AccountRepository {
-    async fn select(&self) -> anyhow::Result<Vec<Account>> {
-        let connection = &mut self.provider.get().await?;
-        let results = accounts
-            .select(AccountRow::as_select())
-            .get_results::<AccountRow>(connection)
-            .await?
-            .into_iter()
-            .map(Account::from)
-            .collect::<Vec<_>>();
-
-        Ok(results)
-    }
-
-    async fn select_by_self(&self, self_id: Uuid) -> anyhow::Result<Option<Account>> {
-        let connection = &mut self.provider.get().await?;
-        let result = accounts
-            .select(AccountRow::as_select())
-            .filter(id.eq(self_id))
-            .first(connection)
-            .await
-            .optional()?
-            .map(Account::from);
-
-        Ok(result)
-    }
-
     async fn select_by_email(&self, self_email: String) -> anyhow::Result<Option<Account>> {
         let connection = &mut self.provider.get().await?;
         let result = accounts
@@ -106,8 +77,6 @@ impl AccountPort for AccountRepository {
     }
 
     async fn insert(&self, account: Account) -> anyhow::Result<Account> {
-        println!("user:{};password_hash:{}", &account.email, &account.password_hash);
-
         let connection = &mut self.provider.get().await?;
         let result = diesel::insert_into(accounts)
             .values(AccountRow::from(account))
@@ -116,20 +85,5 @@ impl AccountPort for AccountRepository {
             .map(Account::from)?;
 
         Ok(result)
-    }
-
-    async fn update(&self, account: Account) -> anyhow::Result<Account> {
-        let _connection = &mut self.provider.get().await?;
-
-        Ok(account)
-    }
-
-    async fn delete(&self, self_id: Uuid) -> anyhow::Result<()> {
-        let connection = &mut self.provider.get().await?;
-        let _result = diesel::delete(accounts.filter(id.eq(self_id)))
-            .execute(connection)
-            .await?;
-
-        Ok(())
     }
 }

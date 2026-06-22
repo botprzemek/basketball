@@ -11,19 +11,14 @@ use token::TokenService;
 use crate::adapter::{
     Registry,
     config::TokenConfig,
-    repositories::{
-        AccountRepository, IdentityRepository, MemberRepository, OrganizationRepository,
-        RoleRepository,
-    },
+    repositories::{AccountRepository, MemberRepository, OrganizationRepository, RoleRepository},
 };
 use crate::domain::applications::{
-    AccountApplication, IdentityApplication, MemberApplication, OrganizationApplication,
-    RoleApplication,
+    AccountApplication, MemberApplication, OrganizationApplication, RoleApplication,
 };
 
 pub type AccountService = AccountApplication<AccountRepository>;
 pub type OrganizationService = OrganizationApplication<OrganizationRepository>;
-pub type IdentityService = IdentityApplication<IdentityRepository>;
 pub type MemberService = MemberApplication<MemberRepository>;
 pub type RoleService = RoleApplication<RoleRepository>;
 
@@ -44,7 +39,6 @@ impl Services {
             TokenService::new(config.token_issuer(), config.token_secret()),
             PasswordService::new(),
             AccountApplication::new(registry.account.clone()),
-            IdentityApplication::new(registry.identity.clone()),
             MemberApplication::new(registry.member.clone()),
         );
 

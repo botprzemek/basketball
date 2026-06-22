@@ -1,4 +1,3 @@
-# auth-chart/templates/cache.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -30,7 +29,7 @@ metadata:
   name: auth-cache
 spec:
   serviceName: "auth-cache-headless"
-  replicas: { { .Values.cache.replicas } }
+  replicas: {{ .Values.cache.replicas }}
   selector:
     matchLabels:
       app: auth-cache
@@ -41,8 +40,7 @@ spec:
     spec:
       containers:
         - name: valkey
-          image: { { .Values.cache.image } }
-          # Flagi włączające tryb klastra i konfigurujące persystencję danych
+          image: {{ .Values.cache.image }}
           command:
             - "valkey-server"
             - "--cluster-enabled"
@@ -82,4 +80,4 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: { { .Values.cache.storageSize } }
+            storage: {{ .Values.cache.storageSize }}

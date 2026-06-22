@@ -23,8 +23,6 @@ pub struct AuthenticationHandler;
 pub struct RegisterRequest {
     pub email: String,
     pub password: String,
-    pub first_name: String,
-    pub last_name: String,
 }
 
 #[derive(Deserialize)]
@@ -37,18 +35,9 @@ pub struct LoginRequest {
 impl AuthenticationHandler {
     async fn register(
         State(services): State<Arc<Services>>,
-        Json(RegisterRequest {
-            email,
-            password,
-            first_name,
-            last_name,
-        }): Json<RegisterRequest>,
+        Json(RegisterRequest { email, password }): Json<RegisterRequest>,
     ) -> impl IntoResponse {
-        match services
-            .auth()
-            .register(email, password, first_name, last_name)
-            .await
-        {
+        match services.auth().register(email, password).await {
             Ok(_) => StatusCode::CREATED,
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }

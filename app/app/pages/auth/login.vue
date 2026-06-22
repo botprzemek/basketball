@@ -1,25 +1,39 @@
 <script setup lang="ts">
 const { login } = useAuth();
-const credentials = ref<LoginCredentials>({
+
+const credentials = ref({
     email: "v@nightcity.net",
     password: "v-1S-th3-Be$t",
 });
 </script>
 
 <template>
-    <form @submit.prevent="login(credentials)" class="flex flex-col">
-        <input
-            v-model="credentials.email"
-            type="email"
-            placeholder="v@nightcity.net"
-        />
+    <div>
+        <div>
+            <span>Auth</span>
+            <h2>Log into the organization</h2>
+        </div>
 
-        <input
-            v-model="credentials.password"
-            type="password"
-            placeholder="********"
-        />
+        <form @submit.prevent="login(credentials)">
+            <div>
+                <label>E-mail address</label>
+                <input
+                    v-model="credentials.email"
+                    type="email"
+                    placeholder="v@nightcity.net"
+                />
+            </div>
 
-        <button type="submit">Authorize</button>
-    </form>
+            <div>
+                <label>Password</label>
+                <input
+                    v-model="credentials.password"
+                    type="password"
+                    placeholder="********"
+                />
+            </div>
+
+            <button type="submit">Authenticate</button>
+        </form>
+    </div>
 </template>

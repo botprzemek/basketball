@@ -1,7 +1,6 @@
 use axum::{
     Router,
     http::{Method, header},
-    middleware,
 };
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -11,7 +10,6 @@ use crate::adapter::{
     Services,
     config::ServerConfig,
     net::handlers::{AuthenticationHandler, OrganizationsHandler},
-    net::middleware::context_middleware,
 };
 
 pub struct Gateway {
@@ -33,20 +31,17 @@ impl Gateway {
     }
 
     pub fn with_auth(mut self) -> Self {
-        self.router = self.router.nest(
-            "/v1/auth",
-            AuthenticationHandler::v1(self.services.clone()),
-        );
+        self.router = self
+            .router
+            .nest("/v1/auth", AuthenticationHandler::v1(self.services.clone()));
 
         self
     }
 
     pub fn with_organizations(mut self) -> Self {
-        let middleware = middleware::from_fn_with_state(self.services.clone(), context_middleware);
-
         self.router = self.router.nest(
             "/v1/organizations",
-            OrganizationsHandler::v1(self.services.clone()).layer(middleware),
+            OrganizationsHandler::v1(self.services.clone()),
         );
 
         self

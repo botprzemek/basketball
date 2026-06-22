@@ -15,7 +15,7 @@ use diesel::ConnectionResult;
 use futures_util::FutureExt;
 use futures_util::future::BoxFuture;
 
-fn connect(config: &str) -> BoxFuture<'_, ConnectionResult<AsyncPgConnection>> {
+fn connect(_config: &str) -> BoxFuture<'_, ConnectionResult<AsyncPgConnection>> {
     let fut = async {
         use rustls::RootCertStore;
         use std::fs;

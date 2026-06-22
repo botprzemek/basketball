@@ -149,7 +149,7 @@ services:
         condition: service_started
     environment:
       NITRO_HOST: 0.0.0.0
-      NITRO_PORT: 3000
+      NITRO_PORT: 3001
 
       NUXT_APP_BASE_URL: /
-      NUXT_PUBLIC_API_URL: https://auth-api.notbyte.com
+      NUXT_PUBLIC_API_URL: http://localhost:3000

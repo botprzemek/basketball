@@ -8,9 +8,9 @@ pub struct Organization {
     pub id: Uuid,
     pub name: String,
     pub slug: String,
-    pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 impl Organization {
@@ -19,9 +19,9 @@ impl Organization {
             id: Uuid::now_v7(),
             name,
             slug,
-            is_active: true,
             created_at: Utc::now(),
             updated_at: None,
+            deleted_at: None,
         }
     }
 }

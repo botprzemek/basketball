@@ -1,15 +1,21 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Member {
-    pub id: Uuid,
+    pub account_id: Uuid,
     pub organization_id: Uuid,
+    pub given_name: String,
+    pub family_name: String,
+    pub name: String,
     pub email: String,
-    pub first_name: String,
-    pub last_name: String,
-    pub joined_at: DateTime<Utc>,
+    pub phone_number: String,
+    pub gender: i32,
+    pub birthdate: NaiveDate,
+    pub picture: String,
+    pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub verified_at: Option<DateTime<Utc>>,
 }

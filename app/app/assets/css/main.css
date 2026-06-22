@@ -1,6 +1,19 @@
 @import "tailwindcss";
-@import "@nuxt/ui";
+
+@font-face {
+    font-display: swap;
+    font-family: "IBM Plex Mono";
+    font-style: normal;
+    font-weight: 400;
+    src: url("/fonts/ibm-plex-mono-v20-latin-regular.woff2") format("woff2");
+}
 
 @theme {
     --font-sans: "IBM Plex Mono", "sans-serif";
+}
+
+@layer base {
+    body {
+        @apply bg-white;
+    }
 }

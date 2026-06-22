@@ -1,36 +1,40 @@
 export const useAuth = () => {
     const { $api } = useNuxtApp();
 
-    const organizations = useState<any | null>(
+    const contextOrganizations = useState<Array<ContextOrganization> | null>(
         "auth-organizations",
         () => null,
     );
-    const context = useState<any | null>("auth-context", () => null);
+    const contextCurrent = useState<ContextCurrent | null>(
+        "auth-current",
+        () => null,
+    );
 
-    const isLogged = computed(() => !!organizations.value);
-    const isAuthenticated = computed(() => !!context.value);
+    const isLogged = computed(() => !!contextOrganizations.value);
+    const isAuthenticated = computed(() => !!contextCurrent.value);
 
-    const login = async (credentials: LoginCredentials) => {
+    const login = async (data: LoginEvent) => {
         await $api("/auth/login", {
             method: "POST",
-            body: credentials,
+            body: data,
         });
 
-        organizations.value = await $api("/auth/context");
+        contextOrganizations.value =
+            await $api<Array<ContextOrganization>>("/auth/context");
 
         await navigateTo("/auth/select");
     };
 
-    const select = async (organization: any) => {
+    const select = async (data: ContextSelectEvent) => {
         try {
             await $api("/auth/context/select", {
                 method: "POST",
-                body: {
-                    organizationId: organization.id,
-                },
+                body: data,
             });
 
             await navigateTo("/");
+
+            contextOrganizations.value = null;
         } catch {
             await logout();
         }
@@ -38,9 +42,11 @@ export const useAuth = () => {
 
     const current = async () => {
         try {
-            context.value = await $api("/auth/context/current");
+            contextCurrent.value = await $api<ContextCurrent>(
+                "/auth/context/current",
+            );
         } catch {
-            context.value = null;
+            contextCurrent.value = null;
         }
     };
 
@@ -52,13 +58,14 @@ export const useAuth = () => {
         });
 
         clearNuxtData();
-        context.value = null;
-        organizations.value = null;
+
+        contextOrganizations.value = null;
+        contextCurrent.value = null;
     };
 
     return {
-        organizations,
-        context,
+        contextOrganizations,
+        contextCurrent,
         isLogged,
         isAuthenticated,
         login,

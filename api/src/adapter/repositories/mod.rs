@@ -1,5 +1,5 @@
 mod account;
-mod identity;
+// mod identity;
 mod member;
 mod organization;
 mod role;
@@ -7,7 +7,6 @@ mod role;
 mod schema;
 
 pub use account::AccountRepository;
-pub use identity::IdentityRepository;
 pub use member::MemberRepository;
 pub use organization::OrganizationRepository;
 pub use role::RoleRepository;

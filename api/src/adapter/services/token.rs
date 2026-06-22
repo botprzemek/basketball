@@ -2,7 +2,7 @@ use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, deco
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::entities::{Actor, AuthenticatedActor, IdentitySelectionActor};
+use crate::adapter::net::{Actor, AuthenticationActor, SelectionActor};
 
 pub enum AuthenticationState {
     Pending { identity: String },
@@ -135,10 +135,10 @@ impl TokenService {
 
     pub fn authenticate(&self, token: String) -> anyhow::Result<Actor> {
         match self.decode(token)? {
-            Claims::Identity(claims) => Ok(Actor::Selection(IdentitySelectionActor {
+            Claims::Identity(claims) => Ok(Actor::Selected(SelectionActor {
                 account_id: claims.sub,
             })),
-            Claims::Access(claims) => Ok(Actor::Authorized(AuthenticatedActor {
+            Claims::Access(claims) => Ok(Actor::Authorized(AuthenticationActor {
                 account_id: claims.sub,
                 organization_id: claims.oid,
             })),

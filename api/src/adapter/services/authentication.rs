@@ -6,13 +6,15 @@ use axum_extra::extract::CookieJar;
 use uuid::Uuid;
 
 use crate::adapter::services::{
-    AccountService, CookieService, IdentityService, MemberService, PasswordService, TokenService, token::AuthenticationState
+    AccountService, CookieService, MemberService, PasswordService, TokenService,
+    token::AuthenticationState,
 };
+
+use crate::adapter::net::{Actor, AuthenticationActor};
 
 use crate::domain::{
     applications::CreateAccount,
-    entities::Account,
-    entities::{Actor, AuthenticatedActor, Identity, Organization},
+    entities::{Account, Member, Organization},
 };
 
 pub struct AuthenticationService {
@@ -21,7 +23,6 @@ pub struct AuthenticationService {
     password: PasswordService,
 
     account: AccountService,
-    identity: IdentityService,
     member: MemberService,
 }
 
@@ -33,7 +34,6 @@ impl AuthenticationService {
         token: TokenService,
         password: PasswordService,
         account: AccountService,
-        identity: IdentityService,
         member: MemberService,
     ) -> Self {
         Self {
@@ -41,7 +41,6 @@ impl AuthenticationService {
             password,
             token,
             account,
-            identity,
             member,
         }
     }
@@ -58,21 +57,13 @@ impl AuthenticationService {
         self.cookie.get_refresh_token(cookies)
     }
 
-    pub async fn register(
-        &self,
-        email: String,
-        password: String,
-        first_name: String,
-        last_name: String,
-    ) -> anyhow::Result<Account> {
+    pub async fn register(&self, email: String, password: String) -> anyhow::Result<Account> {
         let password_hash = self.password.generate(password).await?;
         let account = self
             .account
             .create(CreateAccount {
                 email,
                 password_hash,
-                first_name,
-                last_name,
             })
             .await?;
 
@@ -99,9 +90,11 @@ impl AuthenticationService {
         }
     }
 
-    pub async fn context(&self, token: String) -> anyhow::Result<Vec<(Identity, Organization)>> {
+    pub async fn context(&self, token: String) -> anyhow::Result<Vec<(Member, Organization)>> {
         match self.token.authenticate(token)? {
-            Actor::Selection(actor) => self.identity.find_by_account(actor.account_id).await,
+            Actor::Selected(selected_actor) => {
+                self.member.find_by_account(selected_actor.account_id).await
+            }
             Actor::Authorized(_) => Err(anyhow::anyhow!("Already logged in")),
         }
     }
@@ -112,10 +105,10 @@ impl AuthenticationService {
         organization_id: Uuid,
     ) -> anyhow::Result<AuthenticationState> {
         match self.token.authenticate(token)? {
-            Actor::Selection(actor) => {
+            Actor::Selected(selected_actor) => {
                 let member = match self
                     .member
-                    .find_by_identity(organization_id, actor.account_id)
+                    .find_by_self(organization_id, selected_actor.account_id)
                     .await?
                 {
                     Some(member) => member,
@@ -123,15 +116,15 @@ impl AuthenticationService {
                 };
 
                 self.token
-                    .issue_authentication(member.id, member .organization_id)
+                    .issue_authentication(member.account_id, member.organization_id)
             }
             Actor::Authorized(_) => Err(anyhow::anyhow!("Already logged in")),
         }
     }
 
-    pub fn current(&self, token: String) -> anyhow::Result<AuthenticatedActor> {
+    pub fn current(&self, token: String) -> anyhow::Result<AuthenticationActor> {
         match self.token.authenticate(token)? {
-            Actor::Authorized(actor) => Ok(actor),
+            Actor::Authorized(autorized_actor) => Ok(autorized_actor),
             _ => Err(anyhow::anyhow!("Not logged in")),
         }
     }

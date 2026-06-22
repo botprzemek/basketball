@@ -1,12 +1,11 @@
-# auth-chart/templates/app.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: auth-app
 spec:
   ports:
-    - port: 3001
-      targetPort: 3001
+    - port: {{ .Values.app.port }}
+      targetPort: {{ .Values.app.port }}
   selector:
     app: auth-app
 ---
@@ -15,7 +14,7 @@ kind: Deployment
 metadata:
   name: auth-app
 spec:
-  replicas: { { .Values.app.replicas } }
+  replicas: {{ .Values.app.replicas }}
   selector:
     matchLabels:
       app: auth-app
@@ -24,17 +23,21 @@ spec:
       labels:
         app: auth-app
     spec:
+      initContainers:
+        - name: wait-for-api
+          image: groundnuty/k8s-wait-for:v2.0
+          args: ["service", "auth-api"]
       containers:
         - name: app
-          image: { { .Values.app.image } }
+          image: {{ .Values.app.image }}
           ports:
-            - containerPort: 3001
+            - containerPort: {{ .Values.app.port }}
           env:
             - name: NITRO_HOST
               value: "0.0.0.0"
             - name: NITRO_PORT
-              value: "3001"
+              value: {{ .Values.app.port | quote }}
             - name: NUXT_APP_BASE_URL
               value: "/"
             - name: NUXT_API_URL
-              value: "http://auth-api:3000" # Wewnętrzny endpoint API w K8s
+              value: "http://auth-api:3000/"

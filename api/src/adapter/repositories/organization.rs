@@ -21,9 +21,9 @@ pub struct OrganizationRow {
     pub id: Uuid,
     pub name: String,
     pub slug: String,
-    pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 impl From<OrganizationRow> for Organization {
@@ -32,9 +32,9 @@ impl From<OrganizationRow> for Organization {
             id: organization.id,
             name: organization.name,
             slug: organization.slug,
-            is_active: organization.is_active,
             created_at: organization.created_at,
             updated_at: organization.updated_at,
+            deleted_at: organization.deleted_at,
         }
     }
 }
@@ -45,9 +45,9 @@ impl From<Organization> for OrganizationRow {
             id: organization.id,
             name: organization.name,
             slug: organization.slug,
-            is_active: organization.is_active,
             created_at: organization.created_at,
             updated_at: organization.updated_at,
+            deleted_at: organization.deleted_at,
         }
     }
 }
@@ -60,19 +60,6 @@ impl OrganizationRepository {
 
 #[async_trait]
 impl OrganizationPort for OrganizationRepository {
-    async fn select(&self) -> anyhow::Result<Vec<Organization>> {
-        let connection = &mut self.provider.get().await?;
-        let results = organizations
-            .select(OrganizationRow::as_select())
-            .get_results::<OrganizationRow>(connection)
-            .await?
-            .into_iter()
-            .map(Organization::from)
-            .collect::<Vec<_>>();
-
-        Ok(results)
-    }
-
     async fn select_by_self(&self, self_id: Uuid) -> anyhow::Result<Option<Organization>> {
         let connection = &mut self.provider.get().await?;
         let result = organizations
@@ -84,31 +71,5 @@ impl OrganizationPort for OrganizationRepository {
             .map(Organization::from);
 
         Ok(result)
-    }
-
-    async fn insert(&self, organization: Organization) -> anyhow::Result<Organization> {
-        let connection = &mut self.provider.get().await?;
-        let result = diesel::insert_into(organizations)
-            .values(OrganizationRow::from(organization))
-            .get_result::<OrganizationRow>(connection)
-            .await
-            .map(Organization::from)?;
-
-        Ok(result)
-    }
-
-    async fn update(&self, organization: Organization) -> anyhow::Result<Organization> {
-        let _connection = &mut self.provider.get().await?;
-
-        Ok(organization)
-    }
-
-    async fn delete(&self, self_id: Uuid) -> anyhow::Result<()> {
-        let connection = &mut self.provider.get().await?;
-        let _result = diesel::delete(organizations.filter(id.eq(self_id)))
-            .execute(connection)
-            .await?;
-
-        Ok(())
     }
 }

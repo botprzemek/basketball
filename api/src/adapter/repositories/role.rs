@@ -7,14 +7,11 @@ use diesel_async::RunQueryDsl;
 use diesel_async::scoped_futures::ScopedFutureExt;
 use uuid::Uuid;
 
-use crate::domain::ports::RolePort;
-use crate::{
-    adapter::{
-        providers::PostgresProvider,
-        repositories::{identities_roles, roles},
-    },
-    domain::entities::Role,
+use crate::adapter::{
+    providers::PostgresProvider,
+    repositories::{members_roles, roles},
 };
+use crate::domain::{entities::Role, ports::RolePort};
 
 #[derive(Clone)]
 pub struct RoleRepository {
@@ -83,7 +80,6 @@ impl RolePort for RoleRepository {
                         .await?;
 
                     roles::table
-                        .distinct()
                         .select(RoleRow::as_select())
                         .get_results::<RoleRow>(conn)
                         .await
@@ -97,7 +93,7 @@ impl RolePort for RoleRepository {
         Ok(results)
     }
 
-    async fn select_by_identity(
+    async fn select_by_member(
         &self,
         self_account_id: Uuid,
         self_organization_id: Uuid,
@@ -111,16 +107,18 @@ impl RolePort for RoleRepository {
                 async move {
                     diesel::sql_query("RESET ALL").execute(conn).await?;
 
+                    diesel::sql_query("SET auth.account_id = $1")
+                        .bind::<diesel::sql_types::Uuid, _>(self_account_id)
+                        .execute(conn)
+                        .await?;
+
                     diesel::sql_query("SET auth.organization_id = $1")
                         .bind::<diesel::sql_types::Uuid, _>(self_organization_id)
                         .execute(conn)
                         .await?;
 
-                    identities_roles::table
-                        .distinct()
+                    members_roles::table
                         .inner_join(roles::table)
-                        .filter(identities_roles::organization_id.eq(self_organization_id))
-                        .filter(identities_roles::account_id.eq(self_account_id))
                         .select(RoleRow::as_select())
                         .get_results::<RoleRow>(conn)
                         .await

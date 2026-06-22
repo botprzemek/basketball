@@ -8,10 +8,9 @@ use axum::{
 use axum_extra::extract::CookieJar;
 
 use crate::adapter::Services;
+use crate::adapter::net::{Actor, AuthenticationActor};
 
-use crate::domain::entities::{Actor, AuthenticatedActor};
-
-impl<S> FromRequestParts<S> for AuthenticatedActor
+impl<S> FromRequestParts<S> for AuthenticationActor
 where
     Arc<Services>: FromRef<S>,
     S: Send + Sync,
@@ -21,9 +20,9 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let services = Arc::<Services>::from_ref(state);
         let cookies = CookieJar::from_headers(&parts.headers);
-
         let token = match services.auth().get_access_token(&cookies) {
             Some(token) => token,
+            // TODO - Refresh token when only refresh-token is accessible
             None => return Err(services.auth().logout(StatusCode::UNAUTHORIZED)),
         };
 
