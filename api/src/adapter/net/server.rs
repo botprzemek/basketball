@@ -1,12 +1,16 @@
-use axum::Router;
-use axum::middleware::from_fn_with_state;
+use axum::{
+    Router,
+    http::{Method, header},
+};
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 
-use crate::adapter::Services;
-use crate::adapter::config::ServerConfig;
-use crate::adapter::net::handlers::AccountHandler;
-use crate::adapter::net::middleware::cache_layer;
+use crate::adapter::{
+    Services,
+    config::ServerConfig,
+    net::handlers::{AuthenticationHandler, OrganizationsHandler},
+};
 
 pub struct Gateway {
     address: String,
@@ -16,7 +20,7 @@ pub struct Gateway {
 
 impl Gateway {
     pub async fn new(config: &impl ServerConfig, services: Arc<Services>) -> anyhow::Result<Self> {
-        let address = config.get_server_url();
+        let address = config.server_url();
         let router = Router::new();
 
         Ok(Gateway {
@@ -26,19 +30,36 @@ impl Gateway {
         })
     }
 
-    pub fn with_v1(mut self) -> Self {
-        let routes_v1 =
-            Router::new().nest("/accounts", AccountHandler::v1(self.services.clone()));
-
-        self.router = self.router.nest("/api/v1", routes_v1);
+    pub fn with_auth(mut self) -> Self {
+        self.router = self
+            .router
+            .nest("/v1/auth", AuthenticationHandler::v1(self.services.clone()));
 
         self
     }
 
-    pub fn with_cache(mut self) -> Self {
-        let layer = from_fn_with_state(self.services.clone(), cache_layer);
+    pub fn with_organizations(mut self) -> Self {
+        self.router = self.router.nest(
+            "/v1/organizations",
+            OrganizationsHandler::v1(self.services.clone()),
+        );
 
-        self.router = self.router.layer(layer);
+        self
+    }
+
+    pub fn with_cors(mut self) -> Self {
+        // TODO - Cors settings
+        let cors = CorsLayer::new()
+            .allow_origin(
+                "http://localhost:3001"
+                    .parse::<axum::http::HeaderValue>()
+                    .unwrap(),
+            )
+            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+            .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
+            .allow_credentials(true);
+
+        self.router = self.router.layer(cors);
 
         self
     }

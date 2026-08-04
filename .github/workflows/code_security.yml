@@ -1,0 +1,14 @@
+name: Scan for leaked credentials
+
+on:
+  push:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@v3.94.0

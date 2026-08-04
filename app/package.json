@@ -1,5 +1,5 @@
 {
-    "name": "basketball-app",
+    "name": "auth-app",
     "version": "0.1.0",
     "private": true,
     "type": "module",
@@ -17,21 +17,14 @@
         "lint:github": "oxlint --format=github",
         "precommit": "oxfmt --write && oxlint --deny-warnings"
     },
-    "dependencies": {
-        "@nuxt/fonts": "^0.14.0",
-        "@nuxt/hints": "^1.0.2",
-        "@nuxt/icon": "^2.2.1",
-        "@nuxt/image": "^2.0.0",
-        "@nuxt/test-utils": "^4.0.0",
-        "@playwright/test": "^1.58.2",
-        "@tailwindcss/vite": "^4.2.2",
-        "@types/node": "^25.5.0",
-        "nuxt": "^4.4.2",
-        "oxfmt": "^0.42.0",
-        "oxlint": "^1.57.0",
-        "oxlint-tsgolint": "^0.17.3",
-        "vitest": "^4.1.2",
-        "vue": "^3.5.30",
-        "vue-router": "^5.0.4"
+    "devDependencies": {
+        "@tailwindcss/vite": "4.3.0",
+        "nuxt": "4.4.6",
+        "oxfmt": "0.52.0",
+        "oxlint": "1.67.0",
+        "oxlint-tsgolint": "0.23.0",
+        "tailwindcss": "^4.3.1",
+        "vue": "3.5.35",
+        "vue-router": "5.1.0"
     }
 }

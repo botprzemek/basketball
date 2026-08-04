@@ -3,23 +3,20 @@ FROM cgr.dev/chainguard/rust:latest AS builder
 COPY --chown=nonroot:nonroot Cargo.toml Cargo.lock ./
 RUN mkdir src
 RUN echo "fn main() {}" > src/main.rs
-RUN cargo build --release
+RUN cargo build --locked --release
 
-WORKDIR /api
+WORKDIR /app
 COPY --chown=nonroot:nonroot . .
-RUN cargo build --release --bin api
+RUN cargo build --locked --release --bin auth-api
 
 
 
 FROM cgr.dev/chainguard/glibc-dynamic AS runner
 
-WORKDIR /api
+WORKDIR /app
 
-ENV SERVER_HOST=0.0.0.0
-ENV SERVER_PORT=3000
-
-COPY --from=builder --chown=nonroot:nonroot /api/target/release/api /usr/local/bin/api
+COPY --from=builder --chown=nonroot:nonroot /app/target/release/auth-api /bin/auth-api
 
 EXPOSE 3000
 
-CMD ["/usr/local/bin/api"]
+CMD ["/bin/auth-api"]

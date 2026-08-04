@@ -1,5 +1,3 @@
-pub mod redis;
-pub mod scylla;
+mod postgres;
 
-pub use redis::RedisProvider;
-pub use scylla::ScyllaProvider;
+pub use postgres::PostgresProvider;

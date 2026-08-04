@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: .
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: cargo
+    directory: ./api
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: ./app
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: devcontainers
+    directory: ./.devcontainer
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directories: [./api, ./app]
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker-compose
+    directory: .
+    schedule:
+      interval: weekly

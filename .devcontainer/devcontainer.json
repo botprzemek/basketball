@@ -1,35 +1,41 @@
 {
   "$schema": "https://raw.githubusercontent.com/devcontainers/spec/refs/heads/main/schemas/devContainer.schema.json",
-  "name": "basketball",
-  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.devcontainer.yml"],
+  "name": "auth",
+  "dockerComposeFile": ["../compose.yaml", "./compose.yaml"],
   "service": "devcontainer",
   "runServices": [
-    "database",
     "database-1",
     "database-2",
     "database-3",
-    "init-database",
+    "init-cluster",
+    "migrate-cluster",
     "cache",
-    "metrics",
-    "monitoring",
     "devcontainer"
   ],
-  "workspaceFolder": "/workspace/basketball",
+  "workspaceFolder": "/workspaces/auth",
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/node:2.0.0": {},
     "ghcr.io/devcontainers/features/rust:1": {}
   },
-  "postStartCommand": "sudo service nginx start && exit",
-  "postCreateCommand": "cd ./app && npm install && cd ../api && cargo build && cargo install cargo-watch --locked && git config --global sequence.editor \"code --wait\"",
-  "forwardPorts": [3000],
+  "updateContentCommand": "${containerWorkspaceFolder}/.devcontainer/updateContentCommand.sh",
+  "postAttachCommand": "${containerWorkspaceFolder}/.devcontainer/postAttachCommand.sh",
+  "forwardPorts": ["auth-devcontainer:3000", "auth-devcontainer:3001", "auth-database-1:8080"],
   "portsAttributes": {
-    "3000": {
-      "label": "NGINX Proxy",
+    "auth-devcontainer:3000": {
+      "label": "Auth API",
+      "onAutoForward": "silent"
+    },
+    "auth-devcontainer:3001": {
+      "label": "Auth App",
+      "onAutoForward": "silent"
+    },
+    "auth-database-1:8080": {
+      "label": "Auth Database",
       "onAutoForward": "silent"
     }
   },
-  "remotePorts": [{ "containerPort": 3000, "localPort": 3000 }],
   "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
   "mounts": ["source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"],
   "customizations": {
     "vscode": {
@@ -105,7 +111,7 @@
         "terminal.integrated.wordWrap": "off",
 
         "chat.agent.enabled": false,
-        "chat.agentsControl.enabled": false,
+        "chat.agentsControl.enabled": "hidden",
         "chat.checkpoints.enabled": false,
         "chat.extensionTools.enabled": false,
         "chat.tips.enabled": false,
@@ -117,7 +123,6 @@
           "**/.output": true,
           "**/node_modules": true
         },
-        "editor.defaultFormatter": "oxc.oxc-vscode",
         "editor.codeActionsOnSave": {
           "source.organizeImports": "never",
           "source.fixAll.oxc": "always",
@@ -129,12 +134,19 @@
         "oxc.fixKind": "all",
         "oxc.trace.server": "verbose",
         "oxc.typeAware": true,
-        "oxc.fmt.configPath": "./app",
+        "oxc.configPath": null,
+        "oxc.disableNestedConfig": false,
 
         "rust-analyzer.check.command": "clippy",
         "rust-analyzer.cargo.buildScripts.enable": true,
         "#js/ts.suggest.completeFunctionCalls#": true,
-        "#js/ts.preferences.importModuleSpecifier#": "non-relative"
+        "#js/ts.preferences.importModuleSpecifier#": "non-relative",
+
+        "[html]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer"
+        },
+
+        "editor.defaultFormatter": "oxc.oxc-vscode"
       }
     }
   }

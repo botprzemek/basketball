@@ -1,33 +1,77 @@
+mod authentication;
+mod cookie;
 mod password;
+mod token;
 
+use authentication::AuthenticationService;
+use cookie::CookieService;
 use password::PasswordService;
+use token::TokenService;
 
-use crate::adapter::Registry;
-use crate::adapter::net::ResponseCache;
-use crate::adapter::repositories::AccountRepository;
-use crate::domain::applications::AccountApplication;
-use crate::domain::ports::PasswordPort;
+use crate::adapter::{
+    Registry,
+    config::TokenConfig,
+    repositories::{AccountRepository, MemberRepository, OrganizationRepository, RoleRepository},
+};
+use crate::domain::applications::{
+    AccountApplication, MemberApplication, OrganizationApplication, RoleApplication,
+};
 
-pub type AccountService = AccountApplication<AccountRepository, PasswordService>;
+pub type AccountService = AccountApplication<AccountRepository>;
+pub type OrganizationService = OrganizationApplication<OrganizationRepository>;
+pub type MemberService = MemberApplication<MemberRepository>;
+pub type RoleService = RoleApplication<RoleRepository>;
 
 pub struct Services {
-    account: AccountService,
-    cache: ResponseCache,
+    token: TokenService,
+    auth: AuthenticationService,
+
+    organization: OrganizationService,
+    member: MemberService,
+    role: RoleService,
 }
 
 impl Services {
-    pub fn new(registry: &Registry) -> Self {
-        let account = AccountApplication::new(registry.account.clone(), PasswordService::new());
-        let cache = registry.cache.clone();
+    pub fn new(config: &impl TokenConfig, registry: &Registry) -> Self {
+        let token = TokenService::new(config.token_issuer(), config.token_secret());
+        let auth = AuthenticationService::new(
+            CookieService::new(),
+            TokenService::new(config.token_issuer(), config.token_secret()),
+            PasswordService::new(),
+            AccountApplication::new(registry.account.clone()),
+            MemberApplication::new(registry.member.clone()),
+        );
 
-        Self { account, cache }
+        let organization = OrganizationApplication::new(registry.organization.clone());
+        let member = MemberApplication::new(registry.member.clone());
+        let role = RoleApplication::new(registry.role.clone());
+
+        Self {
+            organization,
+            member,
+            role,
+            auth,
+            token,
+        }
     }
 
-    pub fn account(&self) -> &AccountService {
-        &self.account
+    pub fn auth(&self) -> &AuthenticationService {
+        &self.auth
     }
 
-    pub fn cache(&self) -> &ResponseCache {
-        &self.cache
+    pub fn token(&self) -> &TokenService {
+        &self.token
+    }
+
+    pub fn organization(&self) -> &OrganizationService {
+        &self.organization
+    }
+
+    pub fn member(&self) -> &MemberService {
+        &self.member
+    }
+
+    pub fn role(&self) -> &RoleService {
+        &self.role
     }
 }
