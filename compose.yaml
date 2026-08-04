@@ -97,7 +97,7 @@ services:
       COCKROACH_HOST: auth-database-1:26257
 
   cache:
-    image: valkey/valkey:9.0-alpine
+    image: valkey/valkey:9.1-alpine
     container_name: auth-cache
     entrypoint: valkey-server --appendonly yes --save 60 1
     networks:
