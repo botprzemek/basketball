@@ -112,7 +112,7 @@ services:
       - cache:/data
 
   api:
-    image: auth/api:0.1.0
+    image: ghcr.io/botprzemek/auth/api:latest
     build: ./api
     container_name: auth-api
     networks:
@@ -139,7 +139,7 @@ services:
       API_CACHE_PORT: 6379
 
   app:
-    image: auth/app:0.1.0
+    image: ghcr.io/botprzemek/auth/app:latest
     build: ./app
     container_name: auth-app
     networks:
