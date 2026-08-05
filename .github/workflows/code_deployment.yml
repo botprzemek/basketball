@@ -92,6 +92,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.release.outputs.new_tag }}
 
       - name: Build and push App Docker image
         uses: docker/build-push-action@v7
@@ -106,3 +108,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.release.outputs.new_tag }}
