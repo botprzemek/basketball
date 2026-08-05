@@ -1,10 +1,19 @@
 # Secure authorization system
 
-An authorization REST API server featuring RLS database queries, JWT cookies and RBAC. The client implementation includes server-side rendering and navigation guards. Made as a college project.
+An authorization REST API server featuring RLS database queries, JWT cookies and RBAC. The client implementation includes server-side rendering and navigation guards.
+
+> [!NOTE]
+> Developed as a college project to demonstrate cookie exchange and end-to-end security patterns in web apps.
 
 ## About
 
 ### Architecture
+
+API - Rust, Axum, diesel
+
+APP - TypeScript, NuxtJS
+
+Database - CockroachDB Cluster
 
 ![High Level Diagram](./.github/assets/high_level.svg)
 
@@ -62,4 +71,4 @@ TODO
 
 ## License
 
-Look at [LICENSE]()
+Look at [LICENSE](./LICENSE)
