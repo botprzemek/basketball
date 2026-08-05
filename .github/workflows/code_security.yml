@@ -13,4 +13,6 @@ jobs:
       - name: TruffleHog OSS
         uses: trufflesecurity/trufflehog@v3.94.0
         with:
-          extra_args: --exclude-paths=/cockroach
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --exclude-paths=./cockroach
