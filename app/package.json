@@ -18,7 +18,7 @@
         "precommit": "oxfmt --write && oxlint --deny-warnings"
     },
     "devDependencies": {
-        "@tailwindcss/vite": "4.3.0",
+        "@tailwindcss/vite": "4.3.3",
         "nuxt": "4.4.6",
         "oxfmt": "0.52.0",
         "oxlint": "1.67.0",
