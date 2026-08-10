@@ -51,6 +51,11 @@ impl Gateway {
         // TODO - Cors settings
         let cors = CorsLayer::new()
             .allow_origin(
+                "https://auth-app.notbyte.com"
+                    .parse::<axum::http::HeaderValue>()
+                    .unwrap(),
+            )
+            .allow_origin(
                 "http://localhost:3001"
                     .parse::<axum::http::HeaderValue>()
                     .unwrap(),
