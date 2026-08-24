@@ -14,7 +14,7 @@ volumes:
     name: auth-cache
 
 x-db-common: &db-common
-  image: "cockroachdb/cockroach:latest-v26.2"
+  image: "cockroachdb/cockroach:latest-v26.3"
   restart: always
   networks:
     auth:
@@ -51,7 +51,7 @@ services:
         condition: service_started
 
   init-cluster:
-    image: "cockroachdb/cockroach:latest-v26.2"
+    image: "cockroachdb/cockroach:latest-v26.3"
     container_name: auth-database-init
     command: init --certs-dir=certs
     networks:
@@ -65,7 +65,7 @@ services:
       COCKROACH_HOST: auth-database-1:26357
 
   migrate-cluster:
-    image: "cockroachdb/cockroach:latest-v26.2"
+    image: "cockroachdb/cockroach:latest-v26.3"
     container_name: auth-database-migrate
     command: sql --certs-dir=certs --file "/cockroach/migrations.sql"
     networks:
@@ -80,7 +80,7 @@ services:
       COCKROACH_HOST: auth-database-1:26257
 
   seed-cluster:
-    image: "cockroachdb/cockroach:latest-v26.2"
+    image: "cockroachdb/cockroach:latest-v26.3"
     container_name: auth-database-seed
     command: sql --certs-dir=certs --file "/cockroach/seeding.sql"
     networks:
